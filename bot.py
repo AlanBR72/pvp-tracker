@@ -120,34 +120,60 @@ def analisar_pvp():
 
         for e in eventos:
 
-            if e in log:
-                continue
-
             if "killed" not in e:
                 continue
 
+            # 🔥 REMOVE TEMPO (parte mais importante)
+            base = e.split(" - ")[0].strip()
+
+            if base in log:
+                continue
+
             try:
-                killer = e.split("killed")[0].strip()
-                morto = e.split("killed")[1].split("[")[0].strip()
+                killer = base.split("killed")[0].strip()
+                morto = base.split("killed")[1].strip()
             except:
                 continue
 
+            # =========================
+            # VIRTUE MATOU PEACE
+            # =========================
             if killer in membros_v and morto in membros_p:
 
-                log[e] = True
-                novas_kills.append(("VIRTUE", e))
+                log[base] = True
+                novas_kills.append(("VIRTUE", base))
                 stats["virtue"][killer] = stats["virtue"].get(killer, 0) + 1
 
+            # =========================
+            # PEACE MATOU VIRTUE
+            # =========================
             elif killer in membros_p and morto in membros_v:
 
-                log[e] = True
-                novas_kills.append(("PEACE", e))
+                log[base] = True
+                novas_kills.append(("PEACE", base))
                 stats["peace"][killer] = stats["peace"].get(killer, 0) + 1
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
 
     return novas_kills, stats
+
+def normalizar_kill(e):
+
+    try:
+        # remove o tempo (tudo depois do -)
+        base = e.split("-")[0].strip()
+
+        killers, morto = base.split("killed")
+
+        lista_killers = sorted([k.strip() for k in killers.split(",")])
+
+        killers_norm = " & ".join(lista_killers)
+
+        return f"{killers_norm} killed {morto.strip()}"
+
+    except:
+        return e
 
 # =========================
 # MONTAR MSG (PAINEL)
