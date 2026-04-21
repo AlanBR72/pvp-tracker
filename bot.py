@@ -159,11 +159,11 @@ def montar_msg(kills_cache):
 
     msg = "⚔️ **PVP TRACKER — VIRTUE vs PEACE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    msg += "🟦 Virtue  ⚔️  Peace 🟥\n\n"
+    msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     # 🔒 SEM KILLS
     if not kills_cache:
-        msg += "Nenhuma kill registrada ainda.\n"
+        msg += "_Nenhuma kill registrada ainda._\n"
 
     else:
         # 🔥 últimas 30 kills
@@ -176,7 +176,7 @@ def montar_msg(kills_cache):
 
             msg += f"{emoji} {linha}\n"
 
-    msg += f"\n⏱️ Última atualização: {agora}"
+    msg += f"\n_⏱️ Última atualização: {agora}_"
 
     return msg[:1900]
 
