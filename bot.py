@@ -157,21 +157,26 @@ def montar_msg(kills_cache):
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
-    msg = f"⚔️ **WAR TRACKER — VIRTUE vs PEACE** ⚔️\n"
-    msg += f"_Atualizado: {agora}_\n\n"
+    msg = "⚔️ **PVP TRACKER — VIRTUE vs PEACE** ⚔️\n\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg += "🟦 Virtue  ⚔️  Peace 🟥\n\n"
 
+    # 🔒 SEM KILLS
     if not kills_cache:
-        msg += "_Nenhuma kill recente_"
-        return msg
+        msg += "Nenhuma kill registrada ainda.\n"
 
-    linhas = []
+    else:
+        # 🔥 últimas 30 kills
+        for tipo, texto in kills_cache[-30:]:
 
-    for tipo, texto in kills_cache[-20:]:
+            emoji = "🟦" if tipo == "VIRTUE" else "🟥"
 
-        emoji = "🟦" if tipo == "VIRTUE" else "🟥"
-        linhas.append(f"{emoji} {texto}")
+            # garante formato bonito
+            linha = texto.replace("  ", " ").strip()
 
-    msg += "\n".join(linhas)
+            msg += f"{emoji} {linha}\n"
+
+    msg += f"\n⏱️ Última atualização: {agora}"
 
     return msg[:1900]
 
@@ -185,34 +190,54 @@ def top3(d):
 def resumo_diario(stats):
 
     msg = "📊 **RESUMO PVP — VIRTUE vs PEACE** 📊\n\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    # RANK VIRTUE
-    msg += "🟦 **Top killers Virtue**\n"
+    # =========================
+    # TOP VIRTUE
+    # =========================
+    msg += "🟦 **Virtue**\n"
+
     top_v = top3(stats.get("virtue", {}))
 
     if top_v:
-        for nome, qtd in top_v:
-            msg += f"• {nome} → {qtd} kills\n"
+        medalhas = ["🥇","🥈","🥉"]
+        for i, (nome, qtd) in enumerate(top_v):
+            msg += f"{medalhas[i]} {nome} → {qtd} kills\n"
     else:
         msg += "_Nenhum_\n"
 
-    # RANK PEACE
-    msg += "\n🟥 **Top killers Peace**\n"
+    # =========================
+    # TOP PEACE
+    # =========================
+    msg += "\n🟥 **Peace**\n"
+
     top_p = top3(stats.get("peace", {}))
 
     if top_p:
-        for nome, qtd in top_p:
-            msg += f"• {nome} → {qtd} kills\n"
+        medalhas = ["🥇","🥈","🥉"]
+        for i, (nome, qtd) in enumerate(top_p):
+            msg += f"{medalhas[i]} {nome} → {qtd} kills\n"
     else:
         msg += "_Nenhum_\n"
 
+    # =========================
     # MORTES
+    # =========================
     mortes_virtue = sum(stats.get("peace", {}).values())
     mortes_peace = sum(stats.get("virtue", {}).values())
 
-    msg += "\n\n☠️ **Mortes na guerra**\n"
-    msg += f"🟦 Virtue morreu → {mortes_virtue}\n"
-    msg += f"🟥 Peace morreu → {mortes_peace}\n"
+    msg += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg += "💀 **Mortes totais**\n\n"
+    msg += f"🟦 Virtue → {mortes_virtue} mortes\n"
+    msg += f"🟥 Peace → {mortes_peace} mortes\n"
+
+    # =========================
+    # CASO SEM PVP
+    # =========================
+    if mortes_virtue == 0 and mortes_peace == 0:
+        msg = "📊 **RESUMO PVP — VIRTUE vs PEACE** 📊\n\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += "Nenhum PvP registrado hoje."
 
     enviar(msg)
 
