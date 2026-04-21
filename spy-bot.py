@@ -10,7 +10,7 @@ import os
 # CONFIG
 # =========================
 
-WEBHOOK = "SEU_WEBHOOK_AQUI"
+WEBHOOK = "https://discord.com/api/webhooks/1496156584630419608/pgGWnevw4PvV_VryvMVoXTaML_Xep51evEdzFXg8inMYbX-ogI7hhs1BhcvYmekCG9l0"
 
 URL_VIRTUE = "https://www.rucoyonline.com/guild/Guilt%20Of%20Virtue"
 URL_PEACE = "https://www.rucoyonline.com/guild/Peace%20Killers"
@@ -20,7 +20,7 @@ BRASIL = pytz.timezone("America/Sao_Paulo")
 ARQ_LOG = "pvp_log.json"
 ARQ_STATS = "pvp_stats.json"
 
-INTERVALO = 180  # 3 minutos
+INTERVALO = 60  # 1 minuto
 
 # =========================
 # DISCORD
