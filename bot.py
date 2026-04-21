@@ -123,35 +123,41 @@ def analisar_pvp():
             if "killed" not in e:
                 continue
 
-            # 🔥 REMOVE TEMPO (parte mais importante)
-            base = e.split(" - ")[0].strip()
+            base = normalizar_kill(e)
 
             if base in log:
                 continue
 
             try:
-                killer = base.split("killed")[0].strip()
-                morto = base.split("killed")[1].strip()
+                killers_str, morto = base.split("killed")
+                killers = [k.strip() for k in killers_str.split("&")]
+                morto = morto.strip()
             except:
                 continue
 
             # =========================
             # VIRTUE MATOU PEACE
             # =========================
-            if killer in membros_v and morto in membros_p:
+            if any(k in membros_v for k in killers) and morto in membros_p:
 
                 log[base] = True
                 novas_kills.append(("VIRTUE", base))
-                stats["virtue"][killer] = stats["virtue"].get(killer, 0) + 1
+
+                for k in killers:
+                    if k in membros_v:
+                        stats["virtue"][k] = stats["virtue"].get(k, 0) + 1
 
             # =========================
             # PEACE MATOU VIRTUE
             # =========================
-            elif killer in membros_p and morto in membros_v:
+            elif any(k in membros_p for k in killers) and morto in membros_v:
 
                 log[base] = True
                 novas_kills.append(("PEACE", base))
-                stats["peace"][killer] = stats["peace"].get(killer, 0) + 1
+
+                for k in killers:
+                    if k in membros_p:
+                        stats["peace"][k] = stats["peace"].get(k, 0) + 1
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
@@ -161,12 +167,15 @@ def analisar_pvp():
 def normalizar_kill(e):
 
     try:
-        # remove o tempo (tudo depois do -)
+        # remove tempo
         base = e.split("-")[0].strip()
 
         killers, morto = base.split("killed")
 
-        lista_killers = sorted([k.strip() for k in killers.split(",")])
+        lista_killers = sorted([
+            k.strip()
+            for k in killers.replace(" and ", ",").split(",")
+        ])
 
         killers_norm = " & ".join(lista_killers)
 
@@ -187,25 +196,22 @@ def montar_msg(kills_cache):
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # 🔒 SEM KILLS
     if not kills_cache:
         msg += "_Nenhuma kill registrada ainda._\n"
 
     else:
-        # 🔥 últimas 30 kills
         for tipo, texto in kills_cache[-30:]:
 
             emoji = "🟦" if tipo == "VIRTUE" else "🟥"
 
-            # garante formato bonito
-            linha = texto.replace("  ", " ").strip()
+            hora = datetime.now(BRASIL).strftime("%H:%M")
 
-            msg += f"{emoji} {linha}\n"
+            msg += f"{emoji} {texto} [{hora}]\n"
 
     msg += f"\n_⏱️ Última atualização: {agora}_"
 
     return msg[:1900]
-
+    
 # =========================
 # RESUMO DIÁRIO
 # =========================
