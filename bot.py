@@ -176,12 +176,9 @@ def pegar_pvp_virtue():
     return
     
 def ultimos_pvp_virtue():
-
     eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
-
     eventos.sort(key=lambda x: x[2], reverse=True)
-
-    return eventos[:30]
+    return eventos
 
 def montar_msg_virtue_pvp():
 
@@ -190,9 +187,8 @@ def montar_msg_virtue_pvp():
     msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    eventos = ultimos_pvp_virtue()
-
-    eventos = sorted(eventos, key=lambda x: x[2], reverse=True)
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
+    eventos.sort(key=lambda x: x[2], reverse=True)
 
     eventos = eventos[:10]
 
@@ -492,7 +488,8 @@ def segundos_ate_3h():
 
 def montar_bloco_virtue_pvp():
 
-    eventos = ultimos_pvp_virtue()
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
+    eventos.sort(key=lambda x: x[2], reverse=True)
 
     msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
 
