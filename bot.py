@@ -272,7 +272,8 @@ def analisar_pvp():
             if len(ULTIMOS_PVP_VIRTUE) > 200:
                 ULTIMOS_PVP_VIRTUE = ULTIMOS_PVP_VIRTUE[-200:]
 
-            print(f"   🔹 RAW: {base} [{tempo}]")
+            if "VIRTUE MATOU PEACE" in status or "PEACE MATOU VIRTUE" in status:
+                print(f"⚔️ {base} [{tempo}]")
 
             if "killed" not in base:
                 continue
@@ -496,21 +497,25 @@ def montar_bloco_virtue_pvp():
 
 def tempo_para_segundos(tempo):
 
-    tempo = tempo.lower()
+    tempo = tempo.lower().replace("about ", "").strip()
+
+    partes = tempo.split()
+
+    try:
+        n = int(partes[0])
+    except:
+        return 999999999  # fallback
 
     if "minute" in tempo:
-        n = int(tempo.split()[0])
         return n * 60
 
     if "hour" in tempo:
-        n = int(tempo.split()[0])
         return n * 3600
 
     if "day" in tempo:
-        n = int(tempo.split()[0])
         return n * 86400
 
-    return 999999999  # fallback (muito antigo)
+    return 999999999
 
 # =========================
 # LOOP
