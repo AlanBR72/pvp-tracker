@@ -192,6 +192,10 @@ def montar_msg_virtue_pvp():
 
     eventos = ultimos_pvp_virtue()
 
+    eventos = sorted(eventos, key=lambda x: x[2], reverse=True)
+
+    eventos = eventos[:10]
+
     if not eventos:
         msg += "_Nenhum PvP encontrado._\n"
 
@@ -394,7 +398,10 @@ def montar_msg():
         elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
             filtrados.append(("🟥", base, tempo, ts))
 
-    for icon, base, tempo, ts in filtrados[:50]:
+    # 🔥 GARANTE ORDEM FINAL CORRETA
+    filtrados.sort(key=lambda x: x[3], reverse=True)
+
+    for icon, base, tempo, ts in filtrados[:10]:
         msg += f"{icon} {base} [{tempo}]\n"
 
     msg += f"\n_⏱️ Atualizado: {agora}_"
