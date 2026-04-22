@@ -110,9 +110,9 @@ def pegar_pvp(nome):
                 if "killed" in frase:
 
                     try:
-                        base, tempo = frase.split("-")
+                        base, tempo, ts = frase.split("-")
                     except:
-                        base, tempo = frase, ""
+                         = frase, ""
 
                     ts = tempo_para_datetime(tempo)
 
@@ -152,12 +152,7 @@ def ultimos_pvp_virtue():
     vistos = set()
     unicos = []
 
-    for item in eventos:
-
-        if len(item) == 3:
-            base, tempo, ts = item
-        else:
-            continue
+    for base, tempo, ts in eventos:
 
         if base in vistos:
             continue
@@ -165,7 +160,10 @@ def ultimos_pvp_virtue():
         vistos.add(base)
         unicos.append((base, tempo, ts))
 
+    # remove inválidos (segurança)
     unicos = [e for e in unicos if e[2] is not None]
+
+    # mais recentes primeiro
     unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
@@ -242,38 +240,29 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 SÓ ANALISA VIRTUE (fonte principal)
     for nome in membros_v:
 
         eventos = pegar_pvp(nome)
 
-        for item in eventos:
-
-            if len(item) == 3:
-                base, tempo, ts = item
-            elif len(item) == 2:
-                base, tempo = item
-                ts = None
-            else:
-                continue
+        for base, tempo, ts in eventos:
 
             # =========================
-            # FILTRO PRINCIPAL
+            # FILTRO
             # =========================
             if "killed" not in base:
                 continue
 
             # =========================
-            # CACHE (SÓ EVENTOS VÁLIDOS)
+            # CACHE (evita duplicado)
             # =========================
-            if "killed" in base:
-                chave_cache = base + tempo
+            chave_cache = base + tempo
 
-                if not any(chave_cache == b + t for b, t in ULTIMOS_PVP_VIRTUE):
-                    ULTIMOS_PVP_VIRTUE.append((base, tempo, tempo_para_datetime(tempo)))
+            if not any(chave_cache == b + t for b, t, _ in ULTIMOS_PVP_VIRTUE):
 
-                    if len(ULTIMOS_PVP_VIRTUE) > 200:
-                        ULTIMOS_PVP_VIRTUE.pop(0)
+                ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
+
+                if len(ULTIMOS_PVP_VIRTUE) > 200:
+                    ULTIMOS_PVP_VIRTUE.pop(0)
 
             # =========================
             # PARSE
@@ -287,9 +276,6 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            # =========================
-            # LOG DUPLICADO
-            # =========================
             chave = f"{' & '.join(killers_lista)} killed {morto}"
 
             if chave in log:
@@ -323,7 +309,6 @@ def analisar_pvp():
                     if limpar_nome(k) in membros_p:
                         stats["peace"][k] = stats["peace"].get(k, 0) + 1
 
-        # 🔥 ANTI-SPAM
         time.sleep(0.3)
 
     salvar(ARQ_LOG, log)
