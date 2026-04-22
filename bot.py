@@ -136,54 +136,43 @@ def pegar_pvp(nome):
         
 def pegar_pvp_virtue():
 
-    membros = pegar_membros(URL_VIRTUE)
-
     eventos = []
 
-    for nome in membros:
+    for nome in MEMBROS_VIRTUE:  # ✅ usa cache
+
+        time.sleep(0.3)
 
         pvp = pegar_pvp(nome)
 
-        for e in pvp:
+        for base, tempo in pvp:
 
             if "killed" not in base:
                 continue
 
-            try:
-                base = e.split(" - ")[0].strip()
-                tempo = e.split(" - ")[1].strip()
-            except:
-                continue
-
-            eventos.append((base, tempo))
+            eventos.append((base.strip(), tempo.strip()))
 
     return eventos
 
 def ultimos_pvp_virtue():
 
-    membros = pegar_membros(URL_VIRTUE)
-
     eventos = []
 
-    for nome in membros:
+    for nome in MEMBROS_VIRTUE:  # ✅ usa cache
 
         pvp = pegar_pvp(nome)
 
-        for e in pvp:
-            eventos.append(e)
+        for base, tempo in pvp:
+            eventos.append((base, tempo))
 
-    # 🔥 REMOVE DUPLICADOS
+    # remove duplicados
     vistos = set()
     unicos = []
 
-    for e in eventos:
-        base = e.split("-")[0].strip()
-
+    for base, tempo in eventos:
         if base not in vistos:
             vistos.add(base)
-            unicos.append(e)
+            unicos.append((base, tempo))
 
-    # 🔥 PEGA OS 5 MAIS RECENTES
     return unicos[:5]
 
 def montar_msg_virtue_pvp():
@@ -219,13 +208,29 @@ def atualizar_membros():
 
     print("\n🔄 Atualizando membros das guilds...")
 
-    v = pegar_membros(URL_VIRTUE)
-    p = pegar_membros(URL_PEACE)
+    try:
+        v = pegar_membros(URL_VIRTUE)
 
-    if v:
-        MEMBROS_VIRTUE = v
-    if p:
-        MEMBROS_PEACE = p
+        if v and len(v) > 5:  # 🔥 evita lista bugada/vazia
+            MEMBROS_VIRTUE = [limpar_nome(m) for m in v]
+            print(f"✅ Virtue atualizada ({len(MEMBROS_VIRTUE)})")
+        else:
+            print("⚠️ Virtue NÃO atualizada (resposta inválida)")
+
+    except Exception as e:
+        print("❌ Erro Virtue:", e)
+
+    try:
+        p = pegar_membros(URL_PEACE)
+
+        if p and len(p) > 5:
+            MEMBROS_PEACE = [limpar_nome(m) for m in p]
+            print(f"✅ Peace atualizada ({len(MEMBROS_PEACE)})")
+        else:
+            print("⚠️ Peace NÃO atualizada (resposta inválida)")
+
+    except Exception as e:
+        print("❌ Erro Peace:", e)
 
     print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}")
     print(f"🟥 Peace membros: {len(MEMBROS_PEACE)}")
@@ -253,6 +258,8 @@ def analisar_pvp():
     novas_kills = []
 
     for nome in membros_v + membros_p:
+
+        time.sleep(0.5)
 
         print(f"\n👤 Verificando: {nome}")
 
@@ -285,7 +292,10 @@ def analisar_pvp():
             # =========================
             # VIRTUE MATOU PEACE
             # =========================
-            if any(k in membros_v for k in killers) and morto in membros_p:
+            killers_norm = [limpar_nome(k) for k in killers]
+            morto_norm = limpar_nome(morto)
+
+            if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
                 print("   🟦 VIRTUE MATOU PEACE")
 
@@ -299,7 +309,7 @@ def analisar_pvp():
             # =========================
             # PEACE MATOU VIRTUE
             # =========================
-            elif any(k in membros_p for k in killers) and morto in membros_v:
+            elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
 
                 print("   🟥 PEACE MATOU VIRTUE")
 
@@ -340,6 +350,9 @@ def normalizar_kill(e):
 
     except:
         return [], ""
+
+def limpar_nome(nome):
+    return nome.strip().lower()
 
 # =========================
 # MONTAR MSG (PAINEL)
@@ -521,6 +534,8 @@ while True:
         else:
             # 🔥 cria painel instantâneo (evita delay inicial)
             msg_id = enviar_e_pegar_id(msg)
+
+        print(f"⏱ Próxima atualização de membros em: {int(600 - (time.time() - ultimo_update_membros))}s")
 
         # =========================
         # RESUMO 03H
