@@ -160,8 +160,6 @@ def pegar_pvp(nome):
         
 def pegar_pvp_virtue():
 
-    eventos = []
-
     for nome in MEMBROS_VIRTUE:
 
         time.sleep(0.3)
@@ -173,36 +171,17 @@ def pegar_pvp_virtue():
             if "killed" not in base:
                 continue
 
-            novo = (base, tempo, ts)
+            ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
-            if novo not in ULTIMOS_PVP_VIRTUE:
-                ULTIMOS_PVP_VIRTUE.append(novo)
-
-    return eventos
+    return
     
 def ultimos_pvp_virtue():
 
-    eventos = ULTIMOS_PVP_VIRTUE
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
 
-    # 🔥 REMOVE LIXO
-    eventos = [e for e in eventos if e[2] is not None]
-
-    # 🔥 ORDENA POR TEMPO REAL (MAIS IMPORTANTE)
     eventos.sort(key=lambda x: x[2], reverse=True)
 
-    # 🔥 REMOVE DUPLICADOS POR BASE
-    vistos = set()
-    unicos = []
-
-    for base, tempo, ts in eventos:
-
-        if base in vistos:
-            continue
-
-        vistos.add(base)
-        unicos.append((base, tempo, ts))
-
-    return unicos[:30]
+    return eventos[:30]
 
 def montar_msg_virtue_pvp():
 
