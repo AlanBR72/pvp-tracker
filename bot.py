@@ -20,7 +20,7 @@ BRASIL = pytz.timezone("America/Sao_Paulo")
 ARQ_LOG = "pvp_log.json"
 ARQ_STATS = "pvp_stats.json"
 
-INTERVALO = 60  # 1 minuto
+INTERVALO = 300  # 5 minuto
 
 # =========================
 # CACHE DE MEMBROS
@@ -28,6 +28,7 @@ INTERVALO = 60  # 1 minuto
 
 MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
+ULTIMOS_PVP_VIRTUE = []
 
 # =========================
 # DISCORD
@@ -155,25 +156,17 @@ def pegar_pvp_virtue():
 
 def ultimos_pvp_virtue():
 
-    eventos = []
-
-    for nome in MEMBROS_VIRTUE:
-
-        pvp = pegar_pvp(nome)
-
-        for base, tempo in pvp:
-            eventos.append((base, tempo))
-
     # remove duplicados
     vistos = set()
     unicos = []
 
-    for base, tempo in eventos:
+    for base, tempo in reversed(ULTIMOS_PVP_VIRTUE):
+
         if base not in vistos:
             vistos.add(base)
             unicos.append((base, tempo))
 
-    # 🔥 ORDENA PELO MAIS RECENTE
+    # ordena por tempo
     unicos.sort(key=lambda x: tempo_para_segundos(x[1]))
 
     return unicos[:5]
@@ -271,6 +264,9 @@ def analisar_pvp():
 
         for base, tempo in eventos:
 
+            ULTIMOS_PVP_VIRTUE.append((base, tempo))
+            ULTIMOS_PVP_VIRTUE = ULTIMOS_PVP_VIRTUE[-200:]
+
             print(f"   🔹 RAW: {base} [{tempo}]")
 
             if "killed" not in base:
@@ -329,7 +325,7 @@ def analisar_pvp():
                 print("   ⚪ Ignorado (não é guerra)")
 
         # 🔥 DELAY ANTI-SPAM (ESSENCIAL)
-        time.sleep(0.8)
+        time.sleep(0.3)
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
