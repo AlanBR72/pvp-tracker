@@ -178,7 +178,7 @@ def montar_msg_virtue_pvp():
     eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
     eventos.sort(key=lambda x: x[2], reverse=True)
 
-    eventos = eventos[:10]
+    eventos = eventos
 
     if not eventos:
         msg += "_Nenhum PvP encontrado._\n"
