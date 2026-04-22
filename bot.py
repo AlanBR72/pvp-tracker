@@ -184,7 +184,7 @@ def ultimos_pvp_virtue():
     eventos.sort(key=lambda x: x[2], reverse=True)
 
     # ❌ NÃO remove duplicados por base
-    return eventos[:100]
+    return eventos[:300]
 
 def montar_msg_virtue_pvp():
 
