@@ -141,21 +141,21 @@ def pegar_pvp_virtue():
 
     eventos = []
 
-    for nome in MEMBROS_VIRTUE:  # ✅ usa cache
+    for nome in MEMBROS_VIRTUE:
 
         time.sleep(0.3)
 
         pvp = pegar_pvp(nome)
 
-        for base, tempo in pvp:
+        for base, tempo, ts in pvp:
 
             if "killed" not in base:
                 continue
 
-            eventos.append((base.strip(), tempo.strip()))
+            eventos.append((base.strip(), tempo.strip(), ts))
 
     return eventos
-
+    
 def ultimos_pvp_virtue():
 
     eventos = pegar_pvp_virtue()
@@ -163,15 +163,14 @@ def ultimos_pvp_virtue():
     vistos = set()
     unicos = []
 
-    for base, tempo in eventos:
+    for base, tempo, ts in eventos:
 
         if base in vistos:
             continue
 
         vistos.add(base)
-        unicos.append((base, tempo, tempo_para_datetime(tempo)))
+        unicos.append((base, tempo, ts))
 
-    # 🔥 mais recentes primeiro
     unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
