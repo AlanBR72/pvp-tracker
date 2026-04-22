@@ -166,7 +166,7 @@ def ultimos_pvp_virtue():
     eventos.sort(key=lambda x: x[2], reverse=True)
 
     # ❌ NÃO remove duplicados por base
-    return eventos[:300]
+    return eventos
 
 def montar_msg_virtue_pvp():
 
@@ -260,9 +260,9 @@ def analisar_pvp():
             if not killers or not morto:
                 continue
 
-            killers_lista = killers.split(" & ")
-            killers_norm = [limpar_nome(k) for k in killers_lista]
-            morto_norm = limpar_nome(morto)
+            killers_lista = re.split(r" & | , ", killers)
+            killers_norm = [limpar_nome(k).strip() for k in killers_lista]
+            morto_norm = limpar_nome(morto).strip()
 
             # =========================
             # 🔥 CACHE CORRETO (NÃO DUPLICA MESMA KILL ENTRE PLAYERS)
@@ -372,9 +372,9 @@ def montar_msg():
 
         killers, morto = normalizar_kill(base)
 
-        killers_lista = killers.split(" & ")
-        killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
+        killers_lista = re.split(r" & | , ", killers)
+        killers_norm = [limpar_nome(k).strip() for k in killers_lista]
+        morto_norm = limpar_nome(morto).strip()
 
         if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
             filtrados.append(("🟦", base, tempo, ts))
