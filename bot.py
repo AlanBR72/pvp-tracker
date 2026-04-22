@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import pytz
 import json
 import os
+import re
+from datetime import datetime, timedelta
 
 # =========================
 # CONFIG
@@ -123,7 +125,7 @@ def pegar_pvp(nome):
         for base, tempo in eventos:
             if base not in vistos:
                 vistos.add(base)
-                limpos.append((base, tempo))
+                limpos.append((base, tempo, tempo_para_datetime(tempo)))
 
         print(f"\n📜 PvP extraído de {nome}:")
         for b, t in limpos[:5]:
@@ -167,10 +169,10 @@ def ultimos_pvp_virtue():
             continue
 
         vistos.add(base)
-        unicos.append((base, tempo))
+        unicos.append((base, tempo, tempo_para_datetime(tempo)))
 
     # 🔥 mais recentes primeiro
-    unicos.sort(key=lambda x: tempo_para_segundos(x[1]))
+    unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
 
@@ -266,7 +268,7 @@ def analisar_pvp():
                 chave_cache = base + tempo
 
                 if not any(chave_cache == b + t for b, t in ULTIMOS_PVP_VIRTUE):
-                    ULTIMOS_PVP_VIRTUE.append((base, tempo))
+                    ULTIMOS_PVP_VIRTUE.append((base, tempo, tempo_para_datetime(tempo)))
 
                     if len(ULTIMOS_PVP_VIRTUE) > 200:
                         ULTIMOS_PVP_VIRTUE.pop(0)
@@ -371,7 +373,7 @@ def montar_msg():
         msg += "_Nenhuma kill registrada ainda._\n"
 
     else:
-        for base, tempo in reversed(eventos):
+        for base, tempo, _ in eventos:
 
             killers, morto = normalizar_kill(base)
 
@@ -517,6 +519,26 @@ def tempo_para_segundos(tempo):
         return n * 86400
 
     return 999999999
+
+def tempo_para_datetime(txt):
+
+    now = datetime.now()
+
+    txt = txt.lower()
+
+    if "minute" in txt:
+        num = int(re.findall(r"\d+", txt)[0])
+        return now - timedelta(minutes=num)
+
+    if "hour" in txt:
+        num = int(re.findall(r"\d+", txt)[0])
+        return now - timedelta(hours=num)
+
+    if "day" in txt:
+        num = int(re.findall(r"\d+", txt)[0])
+        return now - timedelta(days=num)
+
+    return now
 
 # =========================
 # LOOP
