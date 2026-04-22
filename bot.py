@@ -171,14 +171,20 @@ def pegar_pvp_virtue():
             if "killed" not in base:
                 continue
 
-            ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
+            if (base, tempo, ts) not in ULTIMOS_PVP_VIRTUE:
+                ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
     return
     
 def ultimos_pvp_virtue():
+
     eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
+
+    # ordena por tempo real
     eventos.sort(key=lambda x: x[2], reverse=True)
-    return eventos
+
+    # ❌ NÃO remove duplicados por base
+    return eventos[:10]
 
 def montar_msg_virtue_pvp():
 
@@ -270,7 +276,7 @@ def analisar_pvp():
             # =========================
             # CACHE (dedupe correto)
             # =========================
-            cache_key = (base, tempo)
+            cache_key = base + "|" + morto_norm if 'morto_norm' in locals() else base
 
             if not any(cache_key == (b, t) for b, t, _ in ULTIMOS_PVP_VIRTUE):
 
@@ -374,8 +380,7 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
-
+    eventos = list({(b, t, ts): (b, t, ts) for b, t, ts in ULTIMOS_PVP_VIRTUE if ts is not None}.values())
     eventos.sort(key=lambda x: x[2], reverse=True)
 
     filtrados = []
