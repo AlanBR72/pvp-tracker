@@ -157,7 +157,7 @@ def ultimos_pvp_virtue():
 
     eventos = []
 
-    for nome in MEMBROS_VIRTUE:  # ✅ usa cache
+    for nome in MEMBROS_VIRTUE:
 
         pvp = pegar_pvp(nome)
 
@@ -172,6 +172,9 @@ def ultimos_pvp_virtue():
         if base not in vistos:
             vistos.add(base)
             unicos.append((base, tempo))
+
+    # 🔥 ORDENA PELO MAIS RECENTE
+    unicos.sort(key=lambda x: tempo_para_segundos(x[1]))
 
     return unicos[:5]
 
@@ -489,6 +492,24 @@ def montar_bloco_virtue_pvp():
         msg += f"🟦 {base} [{tempo}]\n"
 
     return msg
+
+def tempo_para_segundos(tempo):
+
+    tempo = tempo.lower()
+
+    if "minute" in tempo:
+        n = int(tempo.split()[0])
+        return n * 60
+
+    if "hour" in tempo:
+        n = int(tempo.split()[0])
+        return n * 3600
+
+    if "day" in tempo:
+        n = int(tempo.split()[0])
+        return n * 86400
+
+    return 999999999  # fallback (muito antigo)
 
 # =========================
 # LOOP
