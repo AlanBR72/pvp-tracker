@@ -149,7 +149,10 @@ def pegar_pvp_virtue():
             if "killed" not in base:
                 continue
 
-            eventos.append((base.strip(), tempo.strip(), ts))
+            novo = (base, tempo, ts)
+
+            if novo not in ULTIMOS_PVP_VIRTUE:
+                ULTIMOS_PVP_VIRTUE.append(novo)
 
     return eventos
     
@@ -175,8 +178,8 @@ def ultimos_pvp_virtue():
 
     # 🔥 ORDEM REAL (NÃO DEPENDE DE STRING)
     unicos.sort(key=lambda x: x[2], reverse=True)
-
-    return unicos[:5]
+    
+    return unicos[:10]
 
 def montar_msg_virtue_pvp():
 
@@ -286,7 +289,7 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            chave = f"{' & '.join(killers_lista)} killed {morto}"
+            chave = (tuple(sorted(killers_lista)), morto, ts)
 
             if chave in log:
                 continue
