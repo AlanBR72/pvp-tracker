@@ -152,7 +152,7 @@ def pegar_pvp_virtue():
     
 def ultimos_pvp_virtue():
 
-    eventos = ULTIMOS_PVP_VIRTUE
+    eventos = pegar_pvp_virtue()  # 🔥 SEM CACHE
 
     vistos = set()
     unicos = []
@@ -168,8 +168,7 @@ def ultimos_pvp_virtue():
         vistos.add(base)
         unicos.append((base, tempo, ts))
 
-    # 🔥 garante ordenação real
-    unicos.sort(key=lambda x: x[2].timestamp(), reverse=True)
+    unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
 
@@ -359,7 +358,7 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = ULTIMOS_PVP_VIRTUE[-50:]
+    eventos = pegar_pvp_virtue()[-50:]
 
     if not eventos:
         msg += "_Nenhuma kill registrada ainda._\n"
