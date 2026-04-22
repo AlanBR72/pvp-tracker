@@ -162,13 +162,18 @@ def ultimos_pvp_virtue():
         if not ts:
             continue
 
-        if base in vistos:
+        chave = base + str(ts)
+
+        if chave in vistos:
             continue
 
-        vistos.add(base)
+        vistos.add(chave)
         unicos.append((base, tempo, ts))
 
-    unicos.sort(key=lambda x: x[2], reverse=True)
+    def safe_ts(e):
+        return e[2] if isinstance(e[2], datetime) else datetime.min
+
+    unicos.sort(key=safe_ts, reverse=True)
 
     return unicos[:5]
 
