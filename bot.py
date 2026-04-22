@@ -80,11 +80,9 @@ def pegar_pvp(nome):
 
         texto = soup.get_text(" ")
 
-        # 🔒 garante que existe seção PvP
         if "Recent character kills and deaths" not in texto:
             return []
 
-        # 🔥 pega só a parte do PvP
         parte = texto.split("Recent character kills and deaths")[1]
 
         tokens = parte.split()
@@ -96,26 +94,28 @@ def pegar_pvp(nome):
 
             atual.append(palavra)
 
-            # quando encontrar tempo (ago), fecha evento
             if "ago" in palavra:
 
                 frase = " ".join(atual)
 
                 if "killed" in frase:
-                    eventos.append(frase)
+
+                    try:
+                        base, tempo = frase.split("-")
+                        eventos.append((base.strip(), tempo.strip()))
+                    except:
+                        eventos.append((frase.strip(), ""))
 
                 atual = []
 
-        # 🔥 remove duplicados (muito importante)
+        # remove duplicados
         vistos = set()
         limpos = []
 
-        for e in eventos:
-            base = e.split("-")[0].strip()
-
+        for base, tempo in eventos:
             if base not in vistos:
                 vistos.add(base)
-                limpos.append(e)
+                limpos.append((base, tempo))
 
         return limpos
 
@@ -224,12 +224,12 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for e in eventos:
+        for base, tempo in eventos:
 
             if "killed" not in e:
                 continue
 
-            killers, morto = normalizar_kill(e)
+            killers, morto = normalizar_kill(base)
 
             if not killers or not morto:
                 continue
@@ -246,7 +246,7 @@ def analisar_pvp():
             if any(k in membros_v for k in killers) and morto in membros_p:
 
                 log[chave] = True
-                novas_kills.append(("VIRTUE", chave))
+                novas_kills.append(("VIRTUE", base, tempo))
 
                 for k in killers:
                     if k in membros_v:
@@ -258,7 +258,7 @@ def analisar_pvp():
             elif any(k in membros_p for k in killers) and morto in membros_v:
 
                 log[chave] = True
-                novas_kills.append(("PEACE", chave))
+                novas_kills.append(("PEACE", base, tempo))
 
                 for k in killers:
                     if k in membros_p:
@@ -308,12 +308,11 @@ def montar_msg(kills_cache):
     if not kills_cache:
         msg += "_Nenhuma kill registrada ainda._\n"
     else:
-        for tipo, texto in kills_cache[-20:]:
+        for tipo, texto, tempo in kills_cache[-10:]:
 
             emoji = "🟦" if tipo == "VIRTUE" else "🟥"
-            hora = datetime.now(BRASIL).strftime("%H:%M")
 
-            msg += f"{emoji} {texto} [{hora}]\n"
+            msg += f"{emoji} {texto} [{tempo}]\n"
 
     # =========================
     # BLOCO VIRTUE GLOBAL
