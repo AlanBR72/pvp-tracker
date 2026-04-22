@@ -231,10 +231,6 @@ def atualizar_membros():
     print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}")
     print(f"🟥 Peace membros: {len(MEMBROS_PEACE)}")
     
-# =========================
-# ANALISAR PVP
-# =========================
-
 def analisar_pvp():
 
     global ULTIMOS_PVP_VIRTUE
@@ -255,25 +251,18 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 SÓ ANALISA VIRTUE (otimizado)
+    # 🔥 SÓ ANALISA VIRTUE
     for nome in membros_v:
-
-        print(f"\n👤 Verificando: {nome}")
 
         eventos = pegar_pvp(nome)
 
-        print(f"➡️ Eventos encontrados: {len(eventos)}")
-
         for base, tempo in eventos:
 
+            # 🔥 salva histórico
             ULTIMOS_PVP_VIRTUE.append((base, tempo))
 
-            # limita tamanho
             if len(ULTIMOS_PVP_VIRTUE) > 200:
-                ULTIMOS_PVP_VIRTUE = ULTIMOS_PVP_VIRTUE[-200:]
-
-            if "VIRTUE MATOU PEACE" in status or "PEACE MATOU VIRTUE" in status:
-                print(f"⚔️ {base} [{tempo}]")
+                ULTIMOS_PVP_VIRTUE.pop(0)
 
             if "killed" not in base:
                 continue
@@ -284,17 +273,12 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            print(f"   ⚔️ Killers: {killers_lista}")
-            print(f"   💀 Morto: {morto_norm}")
-
             if not killers_lista or not morto:
-                print("   ❌ Falha ao parsear")
                 continue
 
             chave = f"{' & '.join(killers_lista)} killed {morto}"
 
             if chave in log:
-                print("   ⚠️ Já registrado")
                 continue
 
             # =========================
@@ -302,7 +286,7 @@ def analisar_pvp():
             # =========================
             if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
-                print("   🟦 VIRTUE MATOU PEACE")
+                print(f"🟦 {base} [{tempo}]")
 
                 log[chave] = True
                 novas_kills.append(("VIRTUE", base, tempo))
@@ -317,7 +301,7 @@ def analisar_pvp():
             # =========================
             elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
 
-                print("   🟥 PEACE MATOU VIRTUE")
+                print(f"🟥 {base} [{tempo}]")
 
                 log[chave] = True
                 novas_kills.append(("PEACE", base, tempo))
@@ -327,10 +311,7 @@ def analisar_pvp():
                     if k_norm in membros_p:
                         stats["peace"][k] = stats["peace"].get(k, 0) + 1
 
-            else:
-                print("   ⚪ Ignorado (não é guerra)")
-
-        # 🔥 DELAY ANTI-SPAM (ESSENCIAL)
+        # 🔥 DELAY ANTI-SPAM
         time.sleep(0.3)
 
     salvar(ARQ_LOG, log)
