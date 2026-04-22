@@ -257,54 +257,76 @@ def analisar_pvp():
 
     novas_kills = []
 
+    # 🔥 SÓ ANALISA VIRTUE (otimizado)
     for nome in membros_v:
 
-    print(f"\n👤 Verificando: {nome}")
+        print(f"\n👤 Verificando: {nome}")
 
-    eventos = pegar_pvp(nome)
+        eventos = pegar_pvp(nome)
 
-    print(f"➡️ Eventos encontrados: {len(eventos)}")
+        print(f"➡️ Eventos encontrados: {len(eventos)}")
 
-    for base, tempo in eventos:
+        for base, tempo in eventos:
 
-        if "killed" not in base:
-            continue
+            print(f"   🔹 RAW: {base} [{tempo}]")
 
-        killers, morto = normalizar_kill(base)
+            if "killed" not in base:
+                continue
 
-        killers_lista = killers.split(" & ")
-        killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
+            killers, morto = normalizar_kill(base)
 
-        print(f"   ⚔️ Killers: {killers_lista}")
-        print(f"   💀 Morto: {morto_norm}")
+            killers_lista = killers.split(" & ")
+            killers_norm = [limpar_nome(k) for k in killers_lista]
+            morto_norm = limpar_nome(morto)
 
-        if not killers_lista or not morto:
-            continue
+            print(f"   ⚔️ Killers: {killers_lista}")
+            print(f"   💀 Morto: {morto_norm}")
 
-        chave = f"{' & '.join(killers_lista)} killed {morto}"
+            if not killers_lista or not morto:
+                print("   ❌ Falha ao parsear")
+                continue
 
-        if chave in log:
-            continue
+            chave = f"{' & '.join(killers_lista)} killed {morto}"
 
-        # 🟦 Virtue matou alguém da Peace
-        if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
+            if chave in log:
+                print("   ⚠️ Já registrado")
+                continue
 
-            print("   🟦 VIRTUE MATOU PEACE")
+            # =========================
+            # 🟦 VIRTUE MATOU PEACE
+            # =========================
+            if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
-            log[chave] = True
-            novas_kills.append(("VIRTUE", base, tempo))
+                print("   🟦 VIRTUE MATOU PEACE")
 
-        # 🟥 Peace matou Virtue
-        elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
+                log[chave] = True
+                novas_kills.append(("VIRTUE", base, tempo))
 
-            print("   🟥 PEACE MATOU VIRTUE")
+                for k in killers_lista:
+                    k_norm = limpar_nome(k)
+                    if k_norm in membros_v:
+                        stats["virtue"][k] = stats["virtue"].get(k, 0) + 1
 
-            log[chave] = True
-            novas_kills.append(("PEACE", base, tempo))
+            # =========================
+            # 🟥 PEACE MATOU VIRTUE
+            # =========================
+            elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
 
-        else:
-            print("   ⚪ Ignorado")
+                print("   🟥 PEACE MATOU VIRTUE")
+
+                log[chave] = True
+                novas_kills.append(("PEACE", base, tempo))
+
+                for k in killers_lista:
+                    k_norm = limpar_nome(k)
+                    if k_norm in membros_p:
+                        stats["peace"][k] = stats["peace"].get(k, 0) + 1
+
+            else:
+                print("   ⚪ Ignorado (não é guerra)")
+
+        # 🔥 DELAY ANTI-SPAM (ESSENCIAL)
+        time.sleep(0.8)
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
