@@ -352,7 +352,7 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = ULTIMOS_PVP_VIRTUE[-50:]  # só últimos
+    eventos = ULTIMOS_PVP_VIRTUE[-50:]
 
     if not eventos:
         msg += "_Nenhuma kill registrada ainda._\n"
@@ -366,11 +366,9 @@ def montar_msg():
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            # 🟦 VIRTUE matou PEACE
             if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
                 msg += f"🟦 {base} [{tempo}]\n"
 
-            # 🟥 PEACE matou VIRTUE
             elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
                 msg += f"🟥 {base} [{tempo}]\n"
 
@@ -544,8 +542,8 @@ while True:
         # =========================
         # MENSAGEM FINAL
         # =========================
-        msg = montar_msg(kills_cache)
-
+        msg = montar_msg()
+        
         if msg_id:
             editar(msg_id, msg)
         else:
