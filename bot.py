@@ -382,26 +382,15 @@ def montar_msg():
         killers_norm = [limpar_nome(k) for k in killers_lista]
         morto_norm = limpar_nome(morto)
 
-        # =========================
-        # FILTRO CORRETO
-        # =========================
-
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
 
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
 
-        # só aceita VIRTUE vs PEACE
         if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
 
-            # =========================
-            # 🎯 DEFINE EMOJI CERTO
-            # =========================
-            if killer_virtue and morto_peace:
-                icon = "🟦"
-            else:
-                icon = "🟥"
+            icon = "🟦" if killer_virtue and morto_peace else "🟥"
 
             filtrados.append((icon, base, tempo, ts))
 
@@ -416,13 +405,12 @@ def montar_msg():
 
         killers_lista = killers.split(" & ")
 
-        # 🔥 negrito nos nomes
         killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
         morto_fmt = f"**{morto.strip()}**"
 
-        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n\n"
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
-        msg += f"\n**⏱️ Atualizado:** _{agora}_"
+    msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
     
