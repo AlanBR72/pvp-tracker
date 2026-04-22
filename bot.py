@@ -246,31 +246,42 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 SÓ ANALISA VIRTUE
+    # 🔥 SÓ ANALISA VIRTUE (fonte principal)
     for nome in membros_v:
 
         eventos = pegar_pvp(nome)
 
         for base, tempo in eventos:
 
-            # 🔥 salva histórico
+            # =========================
+            # FILTRO PRINCIPAL
+            # =========================
+            if "killed" not in base:
+                continue
+
+            # =========================
+            # CACHE (SÓ EVENTOS VÁLIDOS)
+            # =========================
             ULTIMOS_PVP_VIRTUE.append((base, tempo))
 
             if len(ULTIMOS_PVP_VIRTUE) > 200:
                 ULTIMOS_PVP_VIRTUE.pop(0)
 
-            if "killed" not in base:
-                continue
-
+            # =========================
+            # PARSE
+            # =========================
             killers, morto = normalizar_kill(base)
+
+            if not killers or not morto:
+                continue
 
             killers_lista = killers.split(" & ")
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            if not killers_lista or not morto:
-                continue
-
+            # =========================
+            # LOG DUPLICADO
+            # =========================
             chave = f"{' & '.join(killers_lista)} killed {morto}"
 
             if chave in log:
@@ -287,8 +298,7 @@ def analisar_pvp():
                 novas_kills.append(("VIRTUE", base, tempo))
 
                 for k in killers_lista:
-                    k_norm = limpar_nome(k)
-                    if k_norm in membros_v:
+                    if limpar_nome(k) in membros_v:
                         stats["virtue"][k] = stats["virtue"].get(k, 0) + 1
 
             # =========================
@@ -302,11 +312,10 @@ def analisar_pvp():
                 novas_kills.append(("PEACE", base, tempo))
 
                 for k in killers_lista:
-                    k_norm = limpar_nome(k)
-                    if k_norm in membros_p:
+                    if limpar_nome(k) in membros_p:
                         stats["peace"][k] = stats["peace"].get(k, 0) + 1
 
-        # 🔥 DELAY ANTI-SPAM
+        # 🔥 ANTI-SPAM
         time.sleep(0.3)
 
     salvar(ARQ_LOG, log)
@@ -512,7 +521,6 @@ def tempo_para_segundos(tempo):
 print("🔥 Bot PvP iniciado")
 
 msg_id = None
-kills_cache = []
 
 # 🔥 CARREGA MEMBROS AO INICIAR
 atualizar_membros()
@@ -536,20 +544,21 @@ while True:
         # =========================
         novas, stats = analisar_pvp()
 
-        if novas:
-            kills_cache.extend(novas)
-
         # =========================
-        # MENSAGEM FINAL
+        # MENSAGEM FINAL (usa cache global correto)
         # =========================
         msg = montar_msg()
-        
+
         if msg_id:
             editar(msg_id, msg)
         else:
-            # 🔥 cria painel instantâneo (evita delay inicial)
+            # 🔥 cria painel inicial
             msg_id = enviar_e_pegar_id(msg)
 
+        # =========================
+        # LOG LIMPO (IMPORTANTE)
+        # =========================
+        print(f"🧠 Cache PvP Virtue: {len(ULTIMOS_PVP_VIRTUE)} eventos")
         print(f"⏱ Próxima atualização de membros em: {int(600 - (time.time() - ultimo_update_membros))}s")
 
         # =========================
