@@ -78,20 +78,18 @@ def pegar_pvp(nome):
         r = requests.get(url, timeout=10)
         soup = BeautifulSoup(r.text, "html.parser")
 
-        texto = soup.text
-
-        if "killed" not in texto:
-            return []
-
         eventos = []
 
-        for linha in texto.split("\n"):
+        # 🔥 pega linhas reais do site
+        for linha in soup.stripped_strings:
+
             if "killed" in linha:
                 eventos.append(linha.strip())
 
         return eventos
 
-    except:
+    except Exception as e:
+        print("Erro pvp:", nome, e)
         return []
 
 def pegar_pvp_virtue():
@@ -121,22 +119,37 @@ def pegar_pvp_virtue():
 
 def ultimos_pvp_virtue():
 
-    eventos = pegar_pvp_virtue()
+    membros = pegar_membros(URL_VIRTUE)
 
+    eventos = []
+
+    for nome in membros:
+
+        pvp = pegar_pvp(nome)
+
+        for e in pvp:
+
+            if "killed" not in e:
+                continue
+
+            try:
+                base, tempo = e.split(" - ")
+            except:
+                base = e
+                tempo = ""
+
+            eventos.append((base.strip(), tempo.strip()))
+
+    # remove duplicados
     vistos = set()
     unicos = []
 
     for base, tempo in eventos:
+        if base not in vistos:
+            vistos.add(base)
+            unicos.append((base, tempo))
 
-        chave = base
-
-        if chave in vistos:
-            continue
-
-        vistos.add(chave)
-        unicos.append((base, tempo))
-
-    # pega só os 5 mais recentes
+    # 🔥 pega só os 5 primeiros
     return unicos[:5]
 
 def gerar_msg_pvp_virtue():
