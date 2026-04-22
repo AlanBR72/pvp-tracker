@@ -276,8 +276,12 @@ def analisar_pvp():
 
             killers, morto = normalizar_kill(base)
 
-            print(f"   ⚔️ Killers: {killers}")
-            print(f"   💀 Morto: {morto}")
+            killers_lista = killers.split(" & ")
+            killers_norm = [limpar_nome(k) for k in killers_lista]
+            morto_norm = limpar_nome(morto)
+
+            print(f"   ⚔️ Killers: {killers_lista}")
+            print(f"   💀 Morto: {morto_norm}")
 
             if not killers or not morto:
                 print("   ❌ Falha ao parsear")
@@ -292,7 +296,8 @@ def analisar_pvp():
             # =========================
             # VIRTUE MATOU PEACE
             # =========================
-            killers_norm = [limpar_nome(k) for k in killers]
+            killers_lista = killers.split(" & ")
+            killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
             if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
