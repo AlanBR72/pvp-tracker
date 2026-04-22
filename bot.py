@@ -314,15 +314,12 @@ def montar_msg(kills_cache):
             msg += f"{emoji} {texto} [{hora}]\n"
 
     # =========================
-    # NOVO BLOCO (VIRTUE GLOBAL)
+    # BLOCO VIRTUE GLOBAL
     # =========================
     msg += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    msg += montar_bloco_pvp_virtue()
+    msg += montar_bloco_virtue_pvp()
 
-    # 🔥 adiciona bloco Virtue PvP
-msg += "\n\n" + montar_bloco_virtue_pvp()
-
-msg += f"\n_⏱️ Última atualização: {agora}_"
+    msg += f"\n_⏱️ Última atualização: {agora}_"
 
     return msg[:1900]
     
@@ -412,8 +409,7 @@ def montar_bloco_virtue_pvp():
 
     eventos = ultimos_pvp_virtue()
 
-    msg = "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    msg += "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
+    msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
 
     if not eventos:
         msg += "_Nenhum PvP encontrado._\n"
@@ -423,10 +419,7 @@ def montar_bloco_virtue_pvp():
 
         try:
             base, tempo = e.split("-")
-            tempo = tempo.strip()
-
-            msg += f"🟦 {base.strip()} [{tempo}]\n"
-
+            msg += f"🟦 {base.strip()} [{tempo.strip()}]\n"
         except:
             msg += f"🟦 {e}\n"
 
