@@ -184,26 +184,25 @@ def ultimos_pvp_virtue():
 
     eventos = ULTIMOS_PVP_VIRTUE
 
+    # 🔥 REMOVE LIXO
+    eventos = [e for e in eventos if e[2] is not None]
+
+    # 🔥 ORDENA POR TEMPO REAL (MAIS IMPORTANTE)
+    eventos.sort(key=lambda x: x[2], reverse=True)
+
+    # 🔥 REMOVE DUPLICADOS POR BASE
     vistos = set()
     unicos = []
 
     for base, tempo, ts in eventos:
 
-        if not isinstance(ts, datetime):
+        if base in vistos:
             continue
 
-        chave = base + str(ts)
-
-        if chave in vistos:
-            continue
-
-        vistos.add(chave)
+        vistos.add(base)
         unicos.append((base, tempo, ts))
 
-    # 🔥 ORDEM REAL (NÃO DEPENDE DE STRING)
-    unicos.sort(key=lambda x: x[2], reverse=True)
-    
-    return unicos[:10]
+    return unicos[:30]
 
 def montar_msg_virtue_pvp():
 
