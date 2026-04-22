@@ -110,9 +110,9 @@ def pegar_pvp(nome):
                 if "killed" in frase:
 
                     try:
-                        base, tempo, ts = frase.split("-")
+                        base, tempo = frase.split("-")
                     except:
-                         = frase, ""
+                        base, tempo = frase, ""
 
                     ts = tempo_para_datetime(tempo)
 
