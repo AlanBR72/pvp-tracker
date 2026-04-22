@@ -262,10 +262,14 @@ def analisar_pvp():
             # =========================
             # CACHE (SÓ EVENTOS VÁLIDOS)
             # =========================
-            ULTIMOS_PVP_VIRTUE.append((base, tempo))
+            if "killed" in base:
+                chave_cache = base + tempo
 
-            if len(ULTIMOS_PVP_VIRTUE) > 200:
-                ULTIMOS_PVP_VIRTUE.pop(0)
+                if not any(chave_cache == b + t for b, t in ULTIMOS_PVP_VIRTUE):
+                    ULTIMOS_PVP_VIRTUE.append((base, tempo))
+
+                    if len(ULTIMOS_PVP_VIRTUE) > 200:
+                        ULTIMOS_PVP_VIRTUE.pop(0)
 
             # =========================
             # PARSE
