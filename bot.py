@@ -374,44 +374,30 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = sorted(
-        ULTIMOS_PVP_VIRTUE,
-        key=lambda x: x[2],   # ts
-        reverse=True
-    )[:50]
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
 
-    # 🔥 remove lixo sem timestamp
-    eventos = [e for e in eventos if e[2] is not None]
+    eventos.sort(key=lambda x: x[2], reverse=True)
 
-    if not eventos:
-        msg += "_Nenhuma kill registrada ainda._\n"
+    filtrados = []
 
-    else:
-        for base, tempo, ts in eventos:
+    for base, tempo, ts in eventos:
 
-            killers, morto = normalizar_kill(base)
+        killers, morto = normalizar_kill(base)
 
-            killers_lista = killers.split(" & ")
-            killers_norm = [limpar_nome(k) for k in killers_lista]
-            morto_norm = limpar_nome(morto)
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
 
-            if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
-                msg += f"🟦 {base} [{tempo}]\n"
+        if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
+            filtrados.append(("🟦", base, tempo, ts))
 
-            elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
-                msg += f"🟥 {base} [{tempo}]\n"
+        elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
+            filtrados.append(("🟥", base, tempo, ts))
+
+    for icon, base, tempo, ts in filtrados[:50]:
+        msg += f"{icon} {base} [{tempo}]\n"
 
     msg += f"\n_⏱️ Atualizado: {agora}_"
-
-    return msg[:1900]
-
-    # =========================
-    # BLOCO VIRTUE GLOBAL
-    # =========================
-    msg += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    msg += montar_bloco_virtue_pvp()
-
-    msg += f"\n_⏱️ Última atualização: {agora}_"
 
     return msg[:1900]
     
