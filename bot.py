@@ -383,7 +383,7 @@ def montar_msg():
         morto_norm = limpar_nome(morto)
 
         # =========================
-        # 🔥 FILTRO CORRETO (AQUI É O SEGREDO)
+        # FILTRO CORRETO
         # =========================
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
@@ -394,14 +394,23 @@ def montar_msg():
 
         # só aceita VIRTUE vs PEACE
         if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
-            filtrados.append((base, tempo, ts))
 
-    filtrados.sort(key=lambda x: x[2], reverse=True)
+            # =========================
+            # 🎯 DEFINE EMOJI CERTO
+            # =========================
+            if killer_virtue and morto_peace:
+                icon = "🟦"
+            else:
+                icon = "🟥"
 
-    for base, tempo, ts in filtrados[:10]:
-        msg += f"🟦 {base} [{tempo}]\n"
+            filtrados.append((icon, base, tempo, ts))
 
-    msg += f"\n_⏱️ Atualizado: {agora}_"
+    filtrados.sort(key=lambda x: x[3], reverse=True)
+
+    for icon, base, tempo, ts in filtrados[:10]:
+        msg += f"{icon} {base} - _[{tempo}]_\n\n"
+
+    msg += f"\n**_⏱️ Atualizado:** {agora}_"
 
     return msg[:1900]
     
