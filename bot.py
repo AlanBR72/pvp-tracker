@@ -152,7 +152,12 @@ def ultimos_pvp_virtue():
     vistos = set()
     unicos = []
 
-    for base, tempo, ts in eventos:
+    for item in eventos:
+
+        if len(item) == 3:
+            base, tempo, ts = item
+        else:
+            continue
 
         if base in vistos:
             continue
@@ -242,7 +247,15 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo, ts in eventos:
+        for item in eventos:
+
+            if len(item) == 3:
+                base, tempo, ts = item
+            elif len(item) == 2:
+                base, tempo = item
+                ts = None
+            else:
+                continue
 
             # =========================
             # FILTRO PRINCIPAL
@@ -290,7 +303,7 @@ def analisar_pvp():
                 print(f"🟦 {base} [{tempo}]")
 
                 log[chave] = True
-                novas_kills.append(("VIRTUE", base, tempo))
+                novas_kills.append(("VIRTUE", base, tempo, ts))
 
                 for k in killers_lista:
                     if limpar_nome(k) in membros_v:
@@ -304,7 +317,7 @@ def analisar_pvp():
                 print(f"🟥 {base} [{tempo}]")
 
                 log[chave] = True
-                novas_kills.append(("PEACE", base, tempo))
+                novas_kills.append(("PEACE", base, tempo, ts))
 
                 for k in killers_lista:
                     if limpar_nome(k) in membros_p:
@@ -362,7 +375,7 @@ def montar_msg():
         msg += "_Nenhuma kill registrada ainda._\n"
 
     else:
-        for base, tempo, _ in eventos:
+        for base, tempo, ts in eventos:
 
             killers, morto = normalizar_kill(base)
 
