@@ -369,20 +369,32 @@ def montar_msg():
 
     eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
 
-    # remove duplicatas VISUAIS só (não de dados)
-    vistos = set()
     filtrados = []
 
     for base, tempo, ts in eventos:
 
-        key = base.lower() + "|" + str(ts)
+        killers, morto = normalizar_kill(base)
 
-        if key in vistos:
+        if not killers or not morto:
             continue
 
-        vistos.add(key)
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
 
-        filtrados.append((base, tempo, ts))
+        # =========================
+        # 🔥 FILTRO CORRETO (AQUI É O SEGREDO)
+        # =========================
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
+
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+        morto_peace = morto_norm in MEMBROS_PEACE
+
+        # só aceita VIRTUE vs PEACE
+        if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
+            filtrados.append((base, tempo, ts))
 
     filtrados.sort(key=lambda x: x[2], reverse=True)
 
