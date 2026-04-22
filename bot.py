@@ -260,17 +260,17 @@ def analisar_pvp():
         for base, tempo, ts in eventos:
 
             # =========================
-            # FILTRO
+            # FILTRO BÁSICO
             # =========================
-            if "killed" not in base:
+            if not base or "killed" not in base:
                 continue
 
             # =========================
-            # CACHE (evita duplicado)
+            # CACHE (dedupe correto)
             # =========================
-            chave_cache = base + tempo
+            cache_key = (base, tempo)
 
-            if not any(chave_cache == b + t for b, t, _ in ULTIMOS_PVP_VIRTUE):
+            if not any(cache_key == (b, t) for b, t, _ in ULTIMOS_PVP_VIRTUE):
 
                 ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
@@ -289,9 +289,12 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k) for k in killers_lista]
             morto_norm = limpar_nome(morto)
 
-            chave = (tuple(sorted(killers_lista)), morto, ts)
+            # =========================
+            # LOG KEY (FORÇA STRING — NUNCA TUPLA NO JSON)
+            # =========================
+            log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
-            if chave in log:
+            if log_key in log:
                 continue
 
             # =========================
@@ -301,12 +304,13 @@ def analisar_pvp():
 
                 print(f"🟦 {base} [{tempo}]")
 
-                log[chave] = True
+                log[log_key] = True
                 novas_kills.append(("VIRTUE", base, tempo, ts))
 
                 for k in killers_lista:
-                    if limpar_nome(k) in membros_v:
-                        stats["virtue"][k] = stats["virtue"].get(k, 0) + 1
+                    k_norm = limpar_nome(k)
+                    if k_norm in membros_v:
+                        stats["virtue"][k_norm] = stats["virtue"].get(k_norm, 0) + 1
 
             # =========================
             # 🟥 PEACE MATOU VIRTUE
@@ -315,12 +319,13 @@ def analisar_pvp():
 
                 print(f"🟥 {base} [{tempo}]")
 
-                log[chave] = True
+                log[log_key] = True
                 novas_kills.append(("PEACE", base, tempo, ts))
 
                 for k in killers_lista:
-                    if limpar_nome(k) in membros_p:
-                        stats["peace"][k] = stats["peace"].get(k, 0) + 1
+                    k_norm = limpar_nome(k)
+                    if k_norm in membros_p:
+                        stats["peace"][k_norm] = stats["peace"].get(k_norm, 0) + 1
 
         time.sleep(0.3)
 
