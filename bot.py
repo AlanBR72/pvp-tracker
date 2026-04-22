@@ -156,17 +156,20 @@ def pegar_pvp_virtue():
 
 def ultimos_pvp_virtue():
 
-    # remove duplicados
+    eventos = pegar_pvp_virtue()
+
     vistos = set()
     unicos = []
 
-    for base, tempo in reversed(ULTIMOS_PVP_VIRTUE):
+    for base, tempo in eventos:
 
-        if base not in vistos:
-            vistos.add(base)
-            unicos.append((base, tempo))
+        if base in vistos:
+            continue
 
-    # ordena por tempo
+        vistos.add(base)
+        unicos.append((base, tempo))
+
+    # 🔥 mais recentes primeiro
     unicos.sort(key=lambda x: tempo_para_segundos(x[1]))
 
     return unicos[:5]
@@ -184,16 +187,8 @@ def montar_msg_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
 
     else:
-        for e in eventos:
-
-            try:
-                base, tempo = e.split("-")
-                tempo = tempo.strip()
-
-                msg += f"🟦 {base.strip()} [{tempo}]\n"
-
-            except:
-                msg += f"🟦 {e}\n"
+        for base, tempo in eventos:
+            msg += f"🟦 {base.strip()} [{tempo.strip()}]\n"
 
     msg += f"\n_⏱️ Atualizado: {agora}_"
 
