@@ -23,6 +23,13 @@ ARQ_STATS = "pvp_stats.json"
 INTERVALO = 60  # 1 minuto
 
 # =========================
+# CACHE DE MEMBROS
+# =========================
+
+MEMBROS_VIRTUE = []
+MEMBROS_PEACE = []
+
+# =========================
 # DISCORD
 # =========================
 
@@ -207,6 +214,22 @@ def montar_msg_virtue_pvp():
 
     return msg[:1900]
 
+def atualizar_membros():
+    global MEMBROS_VIRTUE, MEMBROS_PEACE
+
+    print("\n🔄 Atualizando membros das guilds...")
+
+    v = pegar_membros(URL_VIRTUE)
+    p = pegar_membros(URL_PEACE)
+
+    if v:
+        MEMBROS_VIRTUE = v
+    if p:
+        MEMBROS_PEACE = p
+
+    print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}")
+    print(f"🟥 Peace membros: {len(MEMBROS_PEACE)}")
+    
 # =========================
 # ANALISAR PVP
 # =========================
@@ -215,8 +238,8 @@ def analisar_pvp():
 
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
-    membros_v = pegar_membros(URL_VIRTUE)
-    membros_p = pegar_membros(URL_PEACE)
+    membros_v = MEMBROS_VIRTUE
+    membros_p = MEMBROS_PEACE
 
     print(f"🟦 Virtue membros: {len(membros_v)}")
     print(f"🟥 Peace membros: {len(membros_p)}\n")
@@ -463,11 +486,22 @@ print("🔥 Bot PvP iniciado")
 msg_id = None
 kills_cache = []
 
+# 🔥 CARREGA MEMBROS AO INICIAR
+atualizar_membros()
+
+# 🔁 controle de atualização
+ultimo_update_membros = time.time()
+
 proximo_resumo = time.time() + segundos_ate_3h()
 
 while True:
 
     try:
+
+        # 🔄 atualiza membros a cada 10 minutos
+        if time.time() - ultimo_update_membros > 600:
+            atualizar_membros()
+            ultimo_update_membros = time.time()
 
         # =========================
         # WAR TRACK
