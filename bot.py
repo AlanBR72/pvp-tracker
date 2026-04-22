@@ -147,7 +147,7 @@ def pegar_pvp_virtue():
     
 def ultimos_pvp_virtue():
 
-    eventos = pegar_pvp_virtue()
+    eventos = ULTIMOS_PVP_VIRTUE
 
     vistos = set()
     unicos = []
@@ -160,6 +160,7 @@ def ultimos_pvp_virtue():
         vistos.add(base)
         unicos.append((base, tempo, ts))
 
+    unicos = [e for e in unicos if e[2] is not None]
     unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
@@ -177,7 +178,7 @@ def montar_msg_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
 
     else:
-        for base, tempo in eventos:
+        for base, tempo, ts in eventos:
             msg += f"🟦 {base.strip()} [{tempo.strip()}]\n"
 
     msg += f"\n_⏱️ Atualizado: {agora}_"
@@ -241,7 +242,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo in eventos:
+        for base, tempo, ts in eventos:
 
             # =========================
             # FILTRO PRINCIPAL
@@ -481,7 +482,7 @@ def montar_bloco_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
         return msg
 
-    for base, tempo in eventos:
+    for base, tempo, ts in eventos:
         msg += f"🟦 {base} [{tempo}]\n"
 
     return msg
