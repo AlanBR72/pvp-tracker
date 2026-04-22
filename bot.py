@@ -135,7 +135,7 @@ def pegar_pvp_virtue():
 
         for e in pvp:
 
-            if "killed" not in e:
+            if "killed" not in base:
                 continue
 
             try:
@@ -226,7 +226,7 @@ def analisar_pvp():
 
         for base, tempo in eventos:
 
-            if "killed" not in e:
+            if "killed" not in base:
                 continue
 
             killers, morto = normalizar_kill(base)
