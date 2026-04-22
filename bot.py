@@ -145,8 +145,8 @@ def pegar_pvp(nome):
                 # =========================
                 ts = tempo_para_datetime(tempo)
 
-                if not isinstance(ts, datetime):
-                    ts = datetime.min
+                if not ts:
+                    continue
 
                 eventos.append((base.strip(), tempo.strip(), ts))
 
@@ -160,10 +160,10 @@ def pegar_pvp(nome):
     
 def ultimos_pvp_virtue():
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
 
     # ordena por tempo real
-    eventos.sort(key=lambda x: x[2], reverse=True)
+    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
 
     # ❌ NÃO remove duplicados por base
     return eventos
@@ -175,8 +175,8 @@ def montar_msg_virtue_pvp():
     msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
-    eventos.sort(key=lambda x: x[2], reverse=True)
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
+    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
 
     eventos = eventos
 
@@ -364,7 +364,7 @@ def montar_msg():
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     eventos = list({(b, t, ts): (b, t, ts) for b, t, ts in ULTIMOS_PVP_VIRTUE if ts is not None}.values())
-    eventos.sort(key=lambda x: x[2], reverse=True)
+    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
 
     filtrados = []
 
@@ -476,8 +476,8 @@ def segundos_ate_3h():
 
 def montar_bloco_virtue_pvp():
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
-    eventos.sort(key=lambda x: x[2], reverse=True)
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
+    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
 
     msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
 
@@ -518,18 +518,18 @@ def tempo_para_datetime(txt):
 
     txt = txt.lower()
 
+    num = int(re.findall(r"\d+", txt)[0])
+
     if "minute" in txt:
-        num = int(re.findall(r"\d+", txt)[0])
         return now - timedelta(minutes=num)
 
     if "hour" in txt:
-        num = int(re.findall(r"\d+", txt)[0])
         return now - timedelta(hours=num)
 
     if "day" in txt:
-        num = int(re.findall(r"\d+", txt)[0])
         return now - timedelta(days=num)
 
+    # fallback seguro
     return now
 
 # =========================
