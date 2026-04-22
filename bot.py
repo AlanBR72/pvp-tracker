@@ -94,6 +94,98 @@ def pegar_pvp(nome):
     except:
         return []
 
+def pegar_pvp_virtue():
+
+    membros = pegar_membros(URL_VIRTUE)
+
+    eventos = []
+
+    for nome in membros:
+
+        pvp = pegar_pvp(nome)
+
+        for e in pvp:
+
+            if "killed" not in e:
+                continue
+
+            try:
+                base = e.split(" - ")[0].strip()
+                tempo = e.split(" - ")[1].strip()
+            except:
+                continue
+
+            eventos.append((base, tempo))
+
+    return eventos
+
+def ultimos_pvp_virtue():
+
+    eventos = pegar_pvp_virtue()
+
+    vistos = set()
+    unicos = []
+
+    for base, tempo in eventos:
+
+        chave = base
+
+        if chave in vistos:
+            continue
+
+        vistos.add(chave)
+        unicos.append((base, tempo))
+
+    # pega só os 5 mais recentes
+    return unicos[:5]
+
+def gerar_msg_pvp_virtue():
+
+    lista = ultimos_pvp_virtue()
+
+    agora = datetime.now(BRASIL).strftime("%H:%M")
+
+    msg = "⚔️ **ÚLTIMOS PVPs — VIRTUE** ⚔️\n\n"
+
+    if not lista:
+        msg += "_Nenhum PvP recente._"
+        return msg
+
+    for base, tempo in lista:
+
+        # identifica se Virtue matou ou morreu
+        if "Virtue" in base.split("killed")[0]:
+            emoji = "🟦"  # matou
+        else:
+            emoji = "☠️"  # morreu
+
+        msg += f"{emoji} {base} [{tempo}]\n"
+
+    msg += f"\n_⏱️ Atualizado: {agora}_"
+
+    return msg[:1900]
+
+def montar_bloco_pvp_virtue():
+
+    lista = ultimos_pvp_virtue()
+
+    msg = "🟦 **Últimos PvPs — Virtue**\n\n"
+
+    if not lista:
+        msg += "_Nenhum PvP recente._"
+        return msg
+
+    for base, tempo in lista:
+
+        if "Virtue" in base.split("killed")[0]:
+            emoji = "🟦"
+        else:
+            emoji = "☠️"
+
+        msg += f"{emoji} {base} [{tempo}]\n"
+
+    return msg
+
 # =========================
 # ANALISAR PVP
 # =========================
@@ -107,10 +199,7 @@ def analisar_pvp():
     stats = carregar(ARQ_STATS)
 
     if not stats:
-        stats = {
-            "virtue": {},
-            "peace": {}
-        }
+        stats = {"virtue": {}, "peace": {}}
 
     novas_kills = []
 
@@ -123,16 +212,15 @@ def analisar_pvp():
             if "killed" not in e:
                 continue
 
-            base = normalizar_kill(e)
+            killers, morto = normalizar_kill(e)
 
-            if base in log:
+            if not killers or not morto:
                 continue
 
-            try:
-                killers_str, morto = base.split("killed")
-                killers = [k.strip() for k in killers_str.split("&")]
-                morto = morto.strip()
-            except:
+            # cria chave única
+            chave = f"{' & '.join(killers)} killed {morto}"
+
+            if chave in log:
                 continue
 
             # =========================
@@ -140,8 +228,8 @@ def analisar_pvp():
             # =========================
             if any(k in membros_v for k in killers) and morto in membros_p:
 
-                log[base] = True
-                novas_kills.append(("VIRTUE", base))
+                log[chave] = True
+                novas_kills.append(("VIRTUE", chave))
 
                 for k in killers:
                     if k in membros_v:
@@ -152,8 +240,8 @@ def analisar_pvp():
             # =========================
             elif any(k in membros_p for k in killers) and morto in membros_v:
 
-                log[base] = True
-                novas_kills.append(("PEACE", base))
+                log[chave] = True
+                novas_kills.append(("PEACE", chave))
 
                 for k in killers:
                     if k in membros_p:
@@ -168,21 +256,22 @@ def normalizar_kill(e):
 
     try:
         # remove tempo
-        base = e.split("-")[0].strip()
+        base = e.split(" - ")[0].strip()
 
-        killers, morto = base.split("killed")
+        killers_txt, morto = base.split("killed")
 
-        lista_killers = sorted([
-            k.strip()
-            for k in killers.replace(" and ", ",").split(",")
-        ])
+        # padroniza separadores
+        killers_txt = killers_txt.replace(" and ", ",")
+        killers_lista = [k.strip() for k in killers_txt.split(",") if k.strip()]
 
-        killers_norm = " & ".join(lista_killers)
+        killers_lista = sorted(killers_lista)
 
-        return f"{killers_norm} killed {morto.strip()}"
+        killers_norm = " & ".join(killers_lista)
+
+        return killers_norm, morto.strip()
 
     except:
-        return e
+        return [], ""
 
 # =========================
 # MONTAR MSG (PAINEL)
@@ -196,19 +285,26 @@ def montar_msg(kills_cache):
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
+    # =========================
+    # GUERRA
+    # =========================
     if not kills_cache:
         msg += "_Nenhuma kill registrada ainda._\n"
-
     else:
-        for tipo, texto in kills_cache[-30:]:
+        for tipo, texto in kills_cache[-20:]:
 
             emoji = "🟦" if tipo == "VIRTUE" else "🟥"
-
             hora = datetime.now(BRASIL).strftime("%H:%M")
 
             msg += f"{emoji} {texto} [{hora}]\n"
 
-    msg += f"\n_⏱️ Última atualização: {agora}_"
+    # =========================
+    # NOVO BLOCO (VIRTUE GLOBAL)
+    # =========================
+    msg += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg += montar_bloco_pvp_virtue()
+
+    msg += f"\n\n_⏱️ Última atualização: {agora}_"
 
     return msg[:1900]
     
@@ -309,11 +405,17 @@ while True:
 
     try:
 
+        # =========================
+        # WAR TRACK
+        # =========================
         novas, stats = analisar_pvp()
 
         if novas:
             kills_cache.extend(novas)
 
+        # =========================
+        # MENSAGEM FINAL (COM NOVO BLOCO)
+        # =========================
         msg = montar_msg(kills_cache)
 
         if msg_id:
@@ -321,11 +423,12 @@ while True:
         else:
             msg_id = enviar_e_pegar_id(msg)
 
+        # =========================
         # RESUMO 03H
+        # =========================
         if time.time() >= proximo_resumo:
 
             resumo_diario(stats)
-
             proximo_resumo = time.time() + 86400
 
         time.sleep(INTERVALO)
