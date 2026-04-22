@@ -358,7 +358,14 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = pegar_pvp_virtue()[-50:]
+    eventos = sorted(
+        ULTIMOS_PVP_VIRTUE,
+        key=lambda x: x[2],   # ts
+        reverse=True
+    )[:50]
+
+    # 🔥 remove lixo sem timestamp
+    eventos = [e for e in eventos if e[2] is not None]
 
     if not eventos:
         msg += "_Nenhuma kill registrada ainda._\n"
