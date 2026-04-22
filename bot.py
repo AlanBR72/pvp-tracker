@@ -344,7 +344,7 @@ def limpar_nome(nome):
 # MONTAR MSG (PAINEL)
 # =========================
 
-def montar_msg(kills_cache):
+def montar_msg():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
@@ -352,17 +352,31 @@ def montar_msg(kills_cache):
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # =========================
-    # GUERRA
-    # =========================
-    if not kills_cache:
+    eventos = ULTIMOS_PVP_VIRTUE[-50:]  # só últimos
+
+    if not eventos:
         msg += "_Nenhuma kill registrada ainda._\n"
+
     else:
-        for tipo, texto, tempo in kills_cache[-10:]:
+        for base, tempo in reversed(eventos):
 
-            emoji = "🟦" if tipo == "VIRTUE" else "🟥"
+            killers, morto = normalizar_kill(base)
 
-            msg += f"{emoji} {texto} [{tempo}]\n"
+            killers_lista = killers.split(" & ")
+            killers_norm = [limpar_nome(k) for k in killers_lista]
+            morto_norm = limpar_nome(morto)
+
+            # 🟦 VIRTUE matou PEACE
+            if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
+                msg += f"🟦 {base} [{tempo}]\n"
+
+            # 🟥 PEACE matou VIRTUE
+            elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
+                msg += f"🟥 {base} [{tempo}]\n"
+
+    msg += f"\n_⏱️ Atualizado: {agora}_"
+
+    return msg[:1900]
 
     # =========================
     # BLOCO VIRTUE GLOBAL
