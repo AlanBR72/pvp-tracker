@@ -94,7 +94,6 @@ def pegar_pvp(nome):
             return []
 
         parte = texto.split("Recent character kills and deaths")[1]
-
         tokens = parte.split()
 
         eventos = []
@@ -112,26 +111,16 @@ def pegar_pvp(nome):
 
                     try:
                         base, tempo = frase.split("-")
-                        eventos.append((base.strip(), tempo.strip()))
                     except:
-                        eventos.append((frase.strip(), ""))
+                        base, tempo = frase, ""
+
+                    ts = tempo_para_datetime(tempo)
+
+                    eventos.append((base.strip(), tempo.strip(), ts))
 
                 atual = []
 
-        # remove duplicados
-        vistos = set()
-        limpos = []
-
-        for base, tempo in eventos:
-            if base not in vistos:
-                vistos.add(base)
-                limpos.append((base, tempo, tempo_para_datetime(tempo)))
-
-        print(f"\n📜 PvP extraído de {nome}:")
-        for b, t in limpos[:5]:
-            print(f"   ➜ {b} [{t}]")
-
-        return limpos
+        return eventos
 
     except Exception as e:
         print("Erro pegar PvP:", e)
