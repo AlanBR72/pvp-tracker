@@ -7,6 +7,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
+import unicodedata
 
 # ========================= 
 # CONFIG
@@ -349,6 +350,9 @@ def normalizar_kill(e):
         return [], ""
 
 def limpar_nome(nome):
+    nome = unicodedata.normalize("NFKC", nome)
+    nome = nome.replace("\u00a0", " ")  # NBSP
+    nome = re.sub(r"\s+", " ", nome)    # espaços múltiplos
     return nome.strip().lower()
 
 # =========================
