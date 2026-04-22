@@ -109,10 +109,11 @@ def pegar_pvp(nome):
 
                 if "killed" in frase:
 
-                    try:
-                        base, tempo = frase.split("-")
-                    except:
-                        base, tempo = frase, ""
+                    if "-" in frase:
+                        base, tempo = frase.split("-", 1)
+                    else:
+                        base = frase
+                        tempo = ""
 
                     # 🔥 FILTRO DE LIXO (AGORA CORRETO)
                     if not base or not tempo or tempo.strip() == "" or tempo.strip() == "[]":
@@ -121,6 +122,8 @@ def pegar_pvp(nome):
 
                     ts = tempo_para_datetime(tempo)
 
+                    if not isinstance(ts, datetime):
+                        ts = datetime.min
                     eventos.append((base.strip(), tempo.strip(), ts))
 
                     atual = []
@@ -152,14 +155,14 @@ def pegar_pvp_virtue():
     
 def ultimos_pvp_virtue():
 
-    eventos = pegar_pvp_virtue()  # 🔥 SEM CACHE
+    eventos = ULTIMOS_PVP_VIRTUE
 
     vistos = set()
     unicos = []
 
     for base, tempo, ts in eventos:
 
-        if not ts:
+        if not isinstance(ts, datetime):
             continue
 
         chave = base + str(ts)
@@ -170,10 +173,8 @@ def ultimos_pvp_virtue():
         vistos.add(chave)
         unicos.append((base, tempo, ts))
 
-    def safe_ts(e):
-        return e[2] if isinstance(e[2], datetime) else datetime.min
-
-    unicos.sort(key=safe_ts, reverse=True)
+    # 🔥 ORDEM REAL (NÃO DEPENDE DE STRING)
+    unicos.sort(key=lambda x: x[2], reverse=True)
 
     return unicos[:5]
 
