@@ -367,30 +367,27 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = list({(b, t, ts): (b, t, ts) for b, t, ts in ULTIMOS_PVP_VIRTUE if ts is not None}.values())
-    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
 
+    # remove duplicatas VISUAIS só (não de dados)
+    vistos = set()
     filtrados = []
 
     for base, tempo, ts in eventos:
 
-        killers, morto = normalizar_kill(base)
+        key = base.lower() + "|" + str(ts)
 
-        killers_lista = re.split(r" & | , ", killers)
-        killers_norm = [limpar_nome(k).strip() for k in killers_lista]
-        morto_norm = limpar_nome(morto).strip()
+        if key in vistos:
+            continue
 
-        if any(k in MEMBROS_VIRTUE for k in killers_norm) and morto_norm in MEMBROS_PEACE:
-            filtrados.append(("🟦", base, tempo, ts))
+        vistos.add(key)
 
-        elif any(k in MEMBROS_PEACE for k in killers_norm) and morto_norm in MEMBROS_VIRTUE:
-            filtrados.append(("🟥", base, tempo, ts))
+        filtrados.append((base, tempo, ts))
 
-    # 🔥 GARANTE ORDEM FINAL CORRETA
-    filtrados.sort(key=lambda x: x[3], reverse=True)
+    filtrados.sort(key=lambda x: x[2], reverse=True)
 
-    for icon, base, tempo, ts in filtrados[:10]:
-        msg += f"{icon} {base} [{tempo}]\n"
+    for base, tempo, ts in filtrados[:10]:
+        msg += f"🟦 {base} [{tempo}]\n"
 
     msg += f"\n_⏱️ Atualizado: {agora}_"
 
