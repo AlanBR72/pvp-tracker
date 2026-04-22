@@ -20,7 +20,7 @@ BRASIL = pytz.timezone("America/Sao_Paulo")
 ARQ_LOG = "pvp_log.json"
 ARQ_STATS = "pvp_stats.json"
 
-INTERVALO = 300  # 5 minuto
+INTERVALO = 300  # 5 minutos
 
 # =========================
 # CACHE DE MEMBROS
@@ -237,6 +237,8 @@ def atualizar_membros():
 
 def analisar_pvp():
 
+    global ULTIMOS_PVP_VIRTUE
+
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
     membros_v = MEMBROS_VIRTUE
@@ -265,7 +267,10 @@ def analisar_pvp():
         for base, tempo in eventos:
 
             ULTIMOS_PVP_VIRTUE.append((base, tempo))
-            ULTIMOS_PVP_VIRTUE = ULTIMOS_PVP_VIRTUE[-200:]
+
+            # limita tamanho
+            if len(ULTIMOS_PVP_VIRTUE) > 200:
+                ULTIMOS_PVP_VIRTUE = ULTIMOS_PVP_VIRTUE[-200:]
 
             print(f"   🔹 RAW: {base} [{tempo}]")
 
