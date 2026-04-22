@@ -157,24 +157,6 @@ def pegar_pvp(nome):
     except Exception as e:
         print("Erro pegar PvP:", e)
         return []
-        
-def pegar_pvp_virtue():
-
-    for nome in MEMBROS_VIRTUE:
-
-        time.sleep(0.3)
-
-        pvp = pegar_pvp(nome)
-
-        for base, tempo, ts in pvp:
-
-            if "killed" not in base:
-                continue
-
-            if (base, tempo, ts) not in ULTIMOS_PVP_VIRTUE:
-                ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
-
-    return
     
 def ultimos_pvp_virtue():
 
@@ -261,7 +243,7 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 CACHE GLOBAL CORRETO (evita duplicar kill real)
+    # 🔥 CACHE GLOBAL REAL (EVITA DUPLICATA ENTRE TODOS OS MEMBROS)
     PVP_CACHE = set()
 
     for nome in membros_v:
@@ -270,15 +252,9 @@ def analisar_pvp():
 
         for base, tempo, ts in eventos:
 
-            # =========================
-            # FILTRO BÁSICO
-            # =========================
             if not base or "killed" not in base:
                 continue
 
-            # =========================
-            # PARSE PRIMEIRO (IMPORTANTE)
-            # =========================
             killers, morto = normalizar_kill(base)
 
             if not killers or not morto:
@@ -289,23 +265,23 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto)
 
             # =========================
-            # CACHE KEY CORRETO (SEM BUG)
+            # 🔥 CACHE CORRETO (NÃO DUPLICA MESMA KILL ENTRE PLAYERS)
             # =========================
-            cache_key = base.strip().lower() + "|" + str(ts)
+            cache_key = base.strip().lower()  # IGNORA ts (IMPORTANTE)
 
             if cache_key in PVP_CACHE:
                 continue
 
             PVP_CACHE.add(cache_key)
 
-            # guarda no histórico
+            # salva histórico global
             ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
             if len(ULTIMOS_PVP_VIRTUE) > 200:
                 ULTIMOS_PVP_VIRTUE.pop(0)
 
             # =========================
-            # LOG KEY (ANTI DUPLICATA DISCORD)
+            # LOG KEY (ANTI DUP DO DISCORD)
             # =========================
             log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
