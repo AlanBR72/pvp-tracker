@@ -157,7 +157,7 @@ def ultimos_pvp_virtue():
 
     eventos = []
 
-    for nome in MEMBROS_VIRTUE:  # ✅ usa cache
+    for nome in MEMBROS_VIRTUE:
 
         pvp = pegar_pvp(nome)
 
@@ -480,13 +480,8 @@ def montar_bloco_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
         return msg
 
-    for e in eventos:
-
-        try:
-            base, tempo = e.split("-")
-            msg += f"🟦 {base.strip()} [{tempo.strip()}]\n"
-        except:
-            msg += f"🟦 {e}\n"
+    for base, tempo in eventos:
+        msg += f"🟦 {base} [{tempo}]\n"
 
     return msg
 
