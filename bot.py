@@ -109,19 +109,21 @@ def pegar_pvp(nome):
 
                 if "killed" in frase:
 
-                    # 🔥 FILTRA LIXO DO SITE
-                    if not frase or tempo == "[]" or tempo.strip() == "":
-                        atual = []
-                        continue
-
                     try:
                         base, tempo = frase.split("-")
                     except:
                         base, tempo = frase, ""
 
-                    ts = tempo_para_datetime(tempo) if tempo else datetime.min
+                    # 🔥 FILTRO DE LIXO (AGORA CORRETO)
+                    if not base or not tempo or tempo.strip() == "" or tempo.strip() == "[]":
+                        atual = []
+                        continue
+
+                    ts = tempo_para_datetime(tempo)
 
                     eventos.append((base.strip(), tempo.strip(), ts))
+
+                    atual = []
 
         return eventos
 
