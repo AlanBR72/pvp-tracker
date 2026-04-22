@@ -78,44 +78,46 @@ def pegar_pvp(nome):
         r = requests.get(url, timeout=10)
         soup = BeautifulSoup(r.text, "html.parser")
 
-        texto = soup.get_text(separator=" ")
+        texto = soup.get_text(" ")
 
-        # pega só a parte de PvP
+        # 🔒 garante que existe seção PvP
         if "Recent character kills and deaths" not in texto:
             return []
 
+        # 🔥 pega só a parte do PvP
         parte = texto.split("Recent character kills and deaths")[1]
 
+        tokens = parte.split()
+
         eventos = []
+        atual = []
 
-        # 🔥 QUEBRA POR "killed"
-        blocos = parte.split("killed")
+        for palavra in tokens:
 
-        for i in range(len(blocos) - 1):
+            atual.append(palavra)
 
-            try:
-                antes = blocos[i].strip()
-                depois = blocos[i + 1].strip()
+            # quando encontrar tempo (ago), fecha evento
+            if "ago" in palavra:
 
-                # pega killer (últimas palavras antes do "killed")
-                killer = " ".join(antes.split()[-5:])
+                frase = " ".join(atual)
 
-                # pega morto (primeiras palavras depois)
-                morto = " ".join(depois.split()[:3])
+                if "killed" in frase:
+                    eventos.append(frase)
 
-                # pega tempo
-                if "-" in depois:
-                    tempo = depois.split("-")[1].strip()
-                else:
-                    tempo = ""
+                atual = []
 
-                evento = f"{killer} killed {morto} - {tempo}"
-                eventos.append(evento)
+        # 🔥 remove duplicados (muito importante)
+        vistos = set()
+        limpos = []
 
-            except:
-                continue
+        for e in eventos:
+            base = e.split("-")[0].strip()
 
-        return eventos
+            if base not in vistos:
+                vistos.add(base)
+                limpos.append(e)
+
+        return limpos
 
     except Exception as e:
         print("Erro pegar PvP:", e)
