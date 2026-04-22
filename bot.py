@@ -107,26 +107,50 @@ def pegar_pvp(nome):
 
                 frase = " ".join(atual)
 
-                if "killed" in frase:
+                if "killed" not in frase:
+                    atual = []
+                    continue
 
-                    if "-" in frase:
-                        base, tempo = frase.split("-", 1)
-                    else:
-                        base = frase
-                        tempo = ""
+                # =========================
+                # 🔥 SPLIT SEGURO
+                # =========================
+                if "-" in frase:
+                    parts = frase.split("-", 1)
 
-                    # 🔥 FILTRO DE LIXO (AGORA CORRETO)
-                    if not base or not tempo or tempo.strip() == "" or tempo.strip() == "[]":
+                    if len(parts) < 2:
                         atual = []
                         continue
 
-                    ts = tempo_para_datetime(tempo)
+                    base = parts[0].strip()
+                    tempo = parts[1].strip()
 
-                    if not isinstance(ts, datetime):
-                        ts = datetime.min
-                    eventos.append((base.strip(), tempo.strip(), ts))
+                else:
+                    base = frase
+                    tempo = ""
 
+                # =========================
+                # 🔥 FILTRO DE LIXO REAL
+                # =========================
+                if (
+                    not base
+                    or not tempo
+                    or tempo.strip() == ""
+                    or tempo.strip() == "[]"
+                ):
                     atual = []
+                    continue
+
+                # =========================
+                # 🔥 TIMESTAMP SAFE
+                # =========================
+                ts = tempo_para_datetime(tempo)
+
+                if not isinstance(ts, datetime):
+                    ts = datetime.min
+
+                eventos.append((base.strip(), tempo.strip(), ts))
+
+                atual = []
 
         return eventos
 
