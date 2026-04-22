@@ -408,9 +408,21 @@ def montar_msg():
     filtrados.sort(key=lambda x: x[3], reverse=True)
 
     for icon, base, tempo, ts in filtrados[:10]:
-        msg += f"{icon} {base} - _[{tempo}]_\n\n"
 
-    msg += f"\n**_⏱️ Atualizado:** {agora}_"
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+
+        # 🔥 negrito nos nomes
+        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+        morto_fmt = f"**{morto.strip()}**"
+
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n\n"
+
+        msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
     
