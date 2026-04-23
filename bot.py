@@ -433,7 +433,7 @@ def montar_msg():
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(
-        key=lambda x: (get_ts(x), get_ordem(x)),
+        key=lambda x: (x[3] or 0, x[4]),
         reverse=True
     )
 
@@ -621,11 +621,11 @@ def montar_bloco_virtue_pvp():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ordem))
+            filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena pela ordem real
     filtrados.sort(
-        key=lambda x: (get_ts(x), get_ordem(x)),
+        key=lambda x: (x[3] or 0, x[4]),
         reverse=True
     )
 
@@ -633,7 +633,7 @@ def montar_bloco_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
         return msg
 
-    for icon, base, tempo, ordem in filtrados[:10]:
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
         msg += f"{icon} {base} - _[{tempo}]_\n"
 
     return msg
