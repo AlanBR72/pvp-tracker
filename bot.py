@@ -32,6 +32,7 @@ INTERVALO = 300  # 5 minutos
 MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
 ULTIMOS_PVP_VIRTUE = []
+FEED = []
 
 # =========================
 # DISCORD
@@ -226,7 +227,7 @@ def atualizar_membros():
     
 def analisar_pvp():
 
-    global ULTIMOS_PVP_VIRTUE
+    global FEED
 
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
@@ -244,7 +245,6 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 CACHE GLOBAL (evita duplicar entre players diferentes)
     PVP_CACHE = set()
 
     for nome in membros_v:
@@ -266,7 +266,7 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # =========================
-            # CACHE KEY (SEM DUPLICAR KILL REAL)
+            # CACHE (evita duplicar kill real)
             # =========================
             cache_key = killers.strip().lower() + "|" + morto_norm
 
@@ -276,16 +276,18 @@ def analisar_pvp():
             PVP_CACHE.add(cache_key)
 
             # =========================
-            # HISTÓRICO GLOBAL (últimos eventos)
+            # 🔥 APPEND-ONLY FEED (NOVO SISTEMA)
             # =========================
-            if not any(base.strip().lower() == e[0].strip().lower() for e in ULTIMOS_PVP_VIRTUE):
-                ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
+            event = (base, tempo, ts)
 
-                if len(ULTIMOS_PVP_VIRTUE) > 200:
-                    ULTIMOS_PVP_VIRTUE.pop(0)
+            if event not in FEED:
+                FEED.append(event)
+
+                if len(FEED) > 500:
+                    FEED.pop(0)
 
             # =========================
-            # LOG KEY (ANTI DUP DISCORD)
+            # LOG KEY
             # =========================
             log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
@@ -293,7 +295,7 @@ def analisar_pvp():
                 continue
 
             # =========================
-            # 🟦 VIRTUE MATOU PEACE
+            # VIRTUE vs PEACE FILTER
             # =========================
             if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
@@ -307,9 +309,6 @@ def analisar_pvp():
                     if k_norm in membros_v:
                         stats["virtue"][k_norm] = stats["virtue"].get(k_norm, 0) + 1
 
-            # =========================
-            # 🟥 PEACE MATOU VIRTUE
-            # =========================
             elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
 
                 print(f"🟥 {base} [{tempo}]")
@@ -370,7 +369,8 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if e[2] is not None]
+    # 🔥 usa FEED direto (append-only)
+    eventos = [e for e in FEED if e[2] is not None]
 
     filtrados = []
 
