@@ -11,7 +11,7 @@ import unicodedata
 
 # ========================= 
 # CONFIG
-# =========================
+# ========================= 
 
 WEBHOOK = "https://discord.com/api/webhooks/1496156584630419608/pgGWnevw4PvV_VryvMVoXTaML_Xep51evEdzFXg8inMYbX-ogI7hhs1BhcvYmekCG9l0"
 
