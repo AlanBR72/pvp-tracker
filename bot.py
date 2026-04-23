@@ -653,7 +653,7 @@ while True:
         # =========================
         # MENSAGEM FINAL (usa cache global correto)
         # =========================
-        msg = montar_msg()
+        msg = montar_msg() + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n" + montar_msg_virtue()
 
         if msg_id:
             editar(msg_id, msg)
