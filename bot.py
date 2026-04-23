@@ -224,7 +224,7 @@ def montar_msg_virtue():
 
     # 🔥 ordena por chegada real
     filtrados.sort(
-        key=lambda x: (x[3] or 0, x[4]),
+        key=lambda x: x[4],
         reverse=True
     )
     if not filtrados:
@@ -625,7 +625,7 @@ def montar_bloco_virtue_pvp():
 
     # 🔥 ordena pela ordem real
     filtrados.sort(
-        key=lambda x: (x[3] or 0, x[4]),
+        key=lambda x: x[4],
         reverse=True
     )
 
