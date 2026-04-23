@@ -245,8 +245,6 @@ def analisar_pvp():
 
     novas_kills = []
 
-    PVP_CACHE = set()
-
     for nome in membros_v:
 
         eventos = pegar_pvp(nome)
@@ -266,36 +264,20 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # =========================
-            # CACHE (evita duplicar kill real)
+            # 🔥 APPEND-ONLY REAL (SEM FILTRO)
             # =========================
-            cache_key = killers.strip().lower() + "|" + morto_norm
+            FEED.append((base, tempo, ts))
 
-            if cache_key in PVP_CACHE:
-                continue
-
-            PVP_CACHE.add(cache_key)
+            if len(FEED) > 500:
+                FEED.pop(0)
 
             # =========================
-            # 🔥 APPEND-ONLY FEED (NOVO SISTEMA)
-            # =========================
-            event = (base, tempo, ts)
-
-            if event not in FEED:
-                FEED.append(event)
-
-                if len(FEED) > 500:
-                    FEED.pop(0)
-
-            # =========================
-            # LOG KEY
+            # LOG (AGORA NÃO BLOQUEIA MAIS)
             # =========================
             log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
-            if log_key in log:
-                continue
-
             # =========================
-            # VIRTUE vs PEACE FILTER
+            # VIRTUE vs PEACE
             # =========================
             if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
