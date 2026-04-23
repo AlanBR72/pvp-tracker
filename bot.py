@@ -170,26 +170,60 @@ def ultimos_pvp_virtue():
     # ❌ NÃO remove duplicados por base
     return eventos
 
-def montar_msg_virtue_pvp():
+def montar_msg_virtue():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
     msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
-    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
+    eventos = [e for e in FEED if e[2] is not None]
 
-    eventos = eventos
+    filtrados = []
 
-    if not eventos:
-        msg += "_Nenhum PvP encontrado._\n"
+    for base, tempo, ts, ordem in eventos:
 
-    else:
-        for base, tempo, ts in eventos:
-            msg += f"🟦 {base.strip()} [{tempo.strip()}]\n"
+        killers, morto = normalizar_kill(base)
 
-    msg += f"\n_⏱️ Atualizado: {agora}_"
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+
+        # 🔥 FILTRO NOVO (Virtue vs qualquer um)
+        if killer_virtue or morto_virtue:
+
+            # 🎯 define cor baseado em quem matou
+            if killer_virtue:
+                icon = "🟦"
+            else:
+                icon = "🟥"
+
+            filtrados.append((icon, base, tempo, ts, ordem))
+
+    # 🔥 ordenação correta (tempo real + fallback)
+    filtrados.sort(key=lambda x: (x[3] or 0, x[4]), reverse=True)
+
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+
+        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+        morto_fmt = f"**{morto.strip()}**"
+
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+
+    msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
 
