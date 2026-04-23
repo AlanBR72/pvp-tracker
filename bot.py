@@ -177,11 +177,12 @@ def montar_msg_virtue():
     msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    eventos = [e for e in FEED if e[2] is not None]
+    eventos = [e for e in FEED if len(e) >= 3]
 
     filtrados = []
 
     for e in eventos:
+
         if len(e) == 4:
             base, tempo, ts, ordem = e
         else:
@@ -200,19 +201,14 @@ def montar_msg_virtue():
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         morto_virtue = morto_norm in MEMBROS_VIRTUE
 
-        # 🔥 FILTRO NOVO (Virtue vs qualquer um)
+        # 🔥 Virtue vs QUALQUER UM
         if killer_virtue or morto_virtue:
 
-            # 🎯 define cor baseado em quem matou
-            if killer_virtue:
-                icon = "🟦"
-            else:
-                icon = "🟥"
+            icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ts, created_at))
+            filtrados.append((icon, base, tempo, ts, ordem))
 
-    # 🔥 ordenação correta (tempo real + fallback)
-    filtrados.sort(key=lambda x: (x[3] or 0, x[4]), reverse=True)
+    filtrados.sort(key=lambda x: x[4], reverse=True)
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:
 
@@ -288,7 +284,8 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo, ts, created_at in eventos:
+        # 🔥 CORRETO: eventos tem 3 valores
+        for base, tempo, ts in eventos:
 
             if not base or "killed" not in base:
                 continue
@@ -302,40 +299,34 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # =========================
-            # 🔥 APPEND-ONLY REAL (SEM FILTRO)
-            # =========================
+            # 🔥 APPEND-ONLY (com timestamp real)
             FEED.append((base, tempo, ts, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
 
-            # =========================
-            # LOG (AGORA NÃO BLOQUEIA MAIS)
-            # =========================
             log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
-            # =========================
-            # VIRTUE vs PEACE
-            # =========================
+            # 🟦 VIRTUE matou PEACE
             if any(k in membros_v for k in killers_norm) and morto_norm in membros_p:
 
                 print(f"🟦 {base} [{tempo}]")
 
                 log[log_key] = True
-                novas_kills.append(("VIRTUE", base, tempo, ts, created_at))
+                novas_kills.append(("VIRTUE", base, tempo, ts))
 
                 for k in killers_lista:
                     k_norm = limpar_nome(k)
                     if k_norm in membros_v:
                         stats["virtue"][k_norm] = stats["virtue"].get(k_norm, 0) + 1
 
+            # 🟥 PEACE matou VIRTUE
             elif any(k in membros_p for k in killers_norm) and morto_norm in membros_v:
 
                 print(f"🟥 {base} [{tempo}]")
 
                 log[log_key] = True
-                novas_kills.append(("PEACE", base, tempo, ts, created_at))
+                novas_kills.append(("PEACE", base, tempo, ts))
 
                 for k in killers_lista:
                     k_norm = limpar_nome(k)
@@ -390,19 +381,18 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # 🔥 aceita eventos antigos e novos
-    eventos = [e for e in FEED if len(e) >= 3 and e[2] is not None]
+    eventos = [e for e in FEED if len(e) >= 3]
 
     filtrados = []
 
     for e in eventos:
 
-        # 🔥 padronização (resolve TODOS erros)
+        # 🔥 compatível com 3 ou 4 valores
         if len(e) == 4:
-            base, tempo, ts, created_at = e
+            base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            created_at = time.time()  # fallback seguro
+            ordem = time.time()
 
         killers, morto = normalizar_kill(base)
 
@@ -421,14 +411,14 @@ def montar_msg():
 
         if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
 
-            icon = "🟦" if killer_virtue and morto_peace else "🟥"
+            icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ts, created_at))
+            filtrados.append((icon, base, tempo, ts, ordem))
 
-    # 🔥 ordena pelo tempo REAL de chegada (perfeito pro Discord)
+    # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(key=lambda x: x[4], reverse=True)
 
-    for icon, base, tempo, ts, created_at in filtrados[:10]:
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
 
         killers, morto = normalizar_kill(base)
 
@@ -580,17 +570,49 @@ def segundos_ate_3h():
 
 def montar_bloco_virtue_pvp():
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
-    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
-
     msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
 
-    if not eventos:
+    eventos = [e for e in FEED if len(e) >= 3]
+
+    filtrados = []
+
+    for e in eventos:
+
+        # 🔥 compatível com tudo (antigo + novo)
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+
+        # 🔥 Virtue vs QUALQUER UM
+        if killer_virtue or morto_virtue:
+
+            icon = "🟦" if killer_virtue else "🟥"
+
+            filtrados.append((icon, base, tempo, ordem))
+
+    # 🔥 ordena pela ordem real
+    filtrados.sort(key=lambda x: x[3], reverse=True)
+
+    if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
         return msg
 
-    for base, tempo, ts, created_at in eventos:
-        msg += f"🟦 {base} [{tempo}]\n"
+    for icon, base, tempo, ordem in filtrados[:10]:
+        msg += f"{icon} {base} - _[{tempo}]_\n"
 
     return msg
 
