@@ -249,7 +249,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo, ts in eventos:
+        for base, tempo, ts, time.time() in eventos:
 
             if not base or "killed" not in base:
                 continue
@@ -351,12 +351,12 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # 🔥 usa FEED direto (append-only)
+    # 🔥 agora FEED tem 4 valores
     eventos = [e for e in FEED if e[2] is not None]
 
     filtrados = []
 
-    for base, tempo, ts in eventos:
+    for base, tempo, ts, ordem in eventos:  # ✅ CORRIGIDO
 
         killers, morto = normalizar_kill(base)
 
@@ -377,11 +377,13 @@ def montar_msg():
 
             icon = "🟦" if killer_virtue and morto_peace else "🟥"
 
-            filtrados.append((icon, base, tempo, ts))
+            # 🔥 agora guarda ORDEM também
+            filtrados.append((icon, base, tempo, ts, ordem))
 
+    # 🔥 ordena pela ORDEM REAL (mais confiável que ts)
     filtrados.sort(key=lambda x: x[4], reverse=True)
 
-    for icon, base, tempo, ts in filtrados[:10]:
+    for icon, base, tempo, ts, ordem in filtrados[:10]:  # ✅ CORRIGIDO
 
         killers, morto = normalizar_kill(base)
 
