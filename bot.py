@@ -244,7 +244,7 @@ def analisar_pvp():
 
     novas_kills = []
 
-    # 🔥 CACHE GLOBAL REAL (EVITA DUPLICATA ENTRE TODOS OS MEMBROS)
+    # 🔥 CACHE GLOBAL (evita duplicar entre players diferentes)
     PVP_CACHE = set()
 
     for nome in membros_v:
@@ -266,24 +266,26 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # =========================
-            # 🔥 CACHE CORRETO (NÃO DUPLICA MESMA KILL ENTRE PLAYERS)
+            # CACHE KEY (SEM DUPLICAR KILL REAL)
             # =========================
-            cache_key = normalizar_kill(base)[0] + "|" + limpar_nome(normalizar_kill(base)[1])  # IGNORA ts (IMPORTANTE)
+            cache_key = killers.strip().lower() + "|" + morto_norm
 
             if cache_key in PVP_CACHE:
                 continue
 
             PVP_CACHE.add(cache_key)
 
-            # salva histórico global
+            # =========================
+            # HISTÓRICO GLOBAL (últimos eventos)
+            # =========================
             if not any(base.strip().lower() == e[0].strip().lower() for e in ULTIMOS_PVP_VIRTUE):
-            ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
+                ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
-            if len(ULTIMOS_PVP_VIRTUE) > 200:
-                ULTIMOS_PVP_VIRTUE.pop(0)
+                if len(ULTIMOS_PVP_VIRTUE) > 200:
+                    ULTIMOS_PVP_VIRTUE.pop(0)
 
             # =========================
-            # LOG KEY (ANTI DUP DO DISCORD)
+            # LOG KEY (ANTI DUP DISCORD)
             # =========================
             log_key = f"{' & '.join(sorted(killers_lista))} killed {morto} | {tempo}"
 
