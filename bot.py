@@ -381,7 +381,7 @@ def montar_msg():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena pela ORDEM REAL (mais confiável que ts)
-    filtrados.sort(key=lambda x: x[4], reverse=True)
+    filtrados.sort(key=lambda x: (x[3] or 0, x[4]), reverse=True)
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:  # ✅ CORRIGIDO
 
