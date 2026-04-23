@@ -399,7 +399,7 @@ def montar_msg():
 
     filtrados.sort(key=lambda x: x[3], reverse=True)
 
-    for icon, base, tempo, ts in filtrados = sorted(filtrados, key=lambda x: x[3], reverse=True)
+    for icon, base, tempo, ts in filtrados[:10]:
 
         killers, morto = normalizar_kill(base)
 
