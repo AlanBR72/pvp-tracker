@@ -249,7 +249,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo, ts, time.time() in eventos:
+        for base, tempo, ts in eventos:
 
             if not base or "killed" not in base:
                 continue
