@@ -283,7 +283,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for base, tempo, ts in eventos:
+        for base, tempo, ts, created_at in eventos:
 
             if not base or "killed" not in base:
                 continue
@@ -573,7 +573,7 @@ def montar_bloco_virtue_pvp():
         msg += "_Nenhum PvP encontrado._\n"
         return msg
 
-    for base, tempo, ts in eventos:
+    for base, tempo, ts, created_at in eventos:
         msg += f"🟦 {base} [{tempo}]\n"
 
     return msg
