@@ -266,7 +266,7 @@ def analisar_pvp():
             # =========================
             # 🔥 APPEND-ONLY REAL (SEM FILTRO)
             # =========================
-            FEED.append((base, tempo, ts))
+            FEED.append((base, tempo, ts, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -379,7 +379,7 @@ def montar_msg():
 
             filtrados.append((icon, base, tempo, ts))
 
-    filtrados.sort(key=lambda x: x[3], reverse=True)
+    filtrados.sort(key=lambda x: x[4], reverse=True)
 
     for icon, base, tempo, ts in filtrados[:10]:
 
