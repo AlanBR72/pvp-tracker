@@ -177,17 +177,21 @@ def montar_msg_virtue():
     msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    eventos = [e for e in FEED if len(e) >= 3]
-
     filtrados = []
 
-    for e in eventos:
+    for e in FEED:
 
+        # 🔥 compatibilidade total
         if len(e) == 4:
             base, tempo, ts, ordem = e
-        else:
+        elif len(e) == 3:
             base, tempo, ts = e
             ordem = time.time()
+        else:
+            continue  # ignora lixo
+
+        if not base or "killed" not in base:
+            continue
 
         killers, morto = normalizar_kill(base)
 
@@ -206,23 +210,23 @@ def montar_msg_virtue():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ts, ordem))
+            filtrados.append((icon, base, tempo, ordem))
 
-    filtrados.sort(key=lambda x: x[4], reverse=True)
+    # 🔥 ordena por chegada real
+    filtrados.sort(key=lambda x: x[3], reverse=True)
 
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
+    if not filtrados:
+        msg += "_Nenhum PvP encontrado._\n"
+    else:
+        for icon, base, tempo, ordem in filtrados[:10]:
 
-        killers, morto = normalizar_kill(base)
+            killers, morto = normalizar_kill(base)
 
-        if not killers or not morto:
-            continue
+            killers_lista = killers.split(" & ")
+            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+            morto_fmt = f"**{morto.strip()}**"
 
-        killers_lista = killers.split(" & ")
-
-        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-        morto_fmt = f"**{morto.strip()}**"
-
-        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
     msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
