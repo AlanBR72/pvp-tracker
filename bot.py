@@ -204,7 +204,7 @@ def montar_msg_virtue():
             else:
                 icon = "🟥"
 
-            filtrados.append((icon, base, tempo, ts, ordem))
+            filtrados.append((icon, base, tempo, ts, created_at))
 
     # 🔥 ordenação correta (tempo real + fallback)
     filtrados.sort(key=lambda x: (x[3] or 0, x[4]), reverse=True)
@@ -390,7 +390,7 @@ def montar_msg():
 
     filtrados = []
 
-    for base, tempo, ts, ordem in eventos:  # ✅ CORRIGIDO
+    for base, tempo, ts, created_at in eventos:
 
         killers, morto = normalizar_kill(base)
 
@@ -412,12 +412,12 @@ def montar_msg():
             icon = "🟦" if killer_virtue and morto_peace else "🟥"
 
             # 🔥 agora guarda ORDEM também
-            filtrados.append((icon, base, tempo, ts, ordem))
+            filtrados.append((icon, base, tempo, ts, created_at))
 
     # 🔥 ordena pela ORDEM REAL (mais confiável que ts)
-    filtrados.sort(key=lambda x: (x[3] or 0, x[4]), reverse=True)
+    filtrados.sort(key=lambda x: x[4], reverse=True)
 
-    for icon, base, tempo, ts, ordem in filtrados[:10]:  # ✅ CORRIGIDO
+    for icon, base, tempo, ts, created_at in filtrados[:10]:
 
         killers, morto = normalizar_kill(base)
 
