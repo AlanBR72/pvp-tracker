@@ -34,6 +34,16 @@ MEMBROS_PEACE = []
 ULTIMOS_PVP_VIRTUE = []
 FEED = []
 
+def get_ts(e):
+    if len(e) >= 3:
+        return e[2] or 0
+    return 0
+
+def get_ordem(e):
+    if len(e) >= 4:
+        return e[3]
+    return 0
+
 # =========================
 # DISCORD
 # =========================
@@ -210,18 +220,17 @@ def montar_msg_virtue():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ordem))
+            filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena por chegada real
     filtrados.sort(
-        key=lambda x: (x[3] or 0, x[4]), 
+        key=lambda x: (x[3] or 0, x[4]),
         reverse=True
     )
-
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
     else:
-        for icon, base, tempo, ordem in filtrados[:10]:
+        for icon, base, tempo, ts, ordem in filtrados[:10]:
 
             killers, morto = normalizar_kill(base)
 
@@ -307,7 +316,7 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # 🔥 APPEND-ONLY (com timestamp real)
-            FEED.append((base, tempo, ts, time.time()))
+            FEED.append((base, tempo, ts or 0, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -424,7 +433,7 @@ def montar_msg():
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(
-        key=lambda x: (x[3] or 0, x[4]), 
+        key=lambda x: (get_ts(x), get_ordem(x)),
         reverse=True
     )
 
@@ -615,7 +624,10 @@ def montar_bloco_virtue_pvp():
             filtrados.append((icon, base, tempo, ordem))
 
     # 🔥 ordena pela ordem real
-    filtrados.sort(key=lambda x: x[3], reverse=True)
+    filtrados.sort(
+        key=lambda x: (get_ts(x), get_ordem(x)),
+        reverse=True
+    )
 
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
