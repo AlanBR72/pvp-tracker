@@ -224,7 +224,7 @@ def montar_msg_virtue():
 
     # 🔥 ordena por chegada real
     filtrados.sort(
-        key=lambda x: x[4],
+        key=lambda x: x[3] if isinstance(x[3], (int, float)) else 0,
         reverse=True
     )
     if not filtrados:
