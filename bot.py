@@ -444,15 +444,69 @@ def top3(d):
 
 def resumo_diario(stats):
 
+    agora_ts = time.time()
+    limite = agora_ts - (23 * 60 * 60)  # 23 horas
+
     msg = "📊 **RESUMO PVP — VIRTUE vs PEACE** 📊\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+    kills_v = {}
+    kills_p = {}
+
+    mortes_virtue = 0
+    mortes_peace = 0
+
+    # 🔥 FILTRA PELO TEMPO REAL
+    for base, tempo, ts, added_at in FEED:
+
+        if added_at < limite:
+            continue
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
+
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+        morto_peace = morto_norm in MEMBROS_PEACE
+
+        # =========================
+        # 🟦 VIRTUE MATOU PEACE
+        # =========================
+        if killer_virtue and morto_peace:
+
+            mortes_peace += 1
+
+            for k in killers_lista:
+                k_norm = limpar_nome(k)
+                if k_norm in MEMBROS_VIRTUE:
+                    kills_v[k_norm] = kills_v.get(k_norm, 0) + 1
+
+        # =========================
+        # 🟥 PEACE MATOU VIRTUE
+        # =========================
+        elif killer_peace and morto_virtue:
+
+            mortes_virtue += 1
+
+            for k in killers_lista:
+                k_norm = limpar_nome(k)
+                if k_norm in MEMBROS_PEACE:
+                    kills_p[k_norm] = kills_p.get(k_norm, 0) + 1
 
     # =========================
     # TOP VIRTUE
     # =========================
     msg += "🟦 **Virtue**\n"
 
-    top_v = top3(stats.get("virtue", {}))
+    top_v = sorted(kills_v.items(), key=lambda x: x[1], reverse=True)[:3]
 
     if top_v:
         medalhas = ["🥇","🥈","🥉"]
@@ -466,7 +520,7 @@ def resumo_diario(stats):
     # =========================
     msg += "\n🟥 **Peace**\n"
 
-    top_p = top3(stats.get("peace", {}))
+    top_p = sorted(kills_p.items(), key=lambda x: x[1], reverse=True)[:3]
 
     if top_p:
         medalhas = ["🥇","🥈","🥉"]
@@ -478,11 +532,8 @@ def resumo_diario(stats):
     # =========================
     # MORTES
     # =========================
-    mortes_virtue = sum(stats.get("peace", {}).values())
-    mortes_peace = sum(stats.get("virtue", {}).values())
-
     msg += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    msg += "💀 **Mortes totais**\n\n"
+    msg += "💀 **Mortes totais (últimas 23h)**\n\n"
     msg += f"🟦 Virtue → {mortes_virtue} mortes\n"
     msg += f"🟥 Peace → {mortes_peace} mortes\n"
 
@@ -492,15 +543,9 @@ def resumo_diario(stats):
     if mortes_virtue == 0 and mortes_peace == 0:
         msg = "📊 **RESUMO PVP — VIRTUE vs PEACE** 📊\n\n"
         msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        msg += "Nenhum PvP registrado hoje."
+        msg += "Nenhum PvP nas últimas 23h."
 
     enviar(msg)
-
-    # reset diário
-    salvar(ARQ_STATS, {
-        "virtue": {},
-        "peace": {}
-    })
 
 # =========================
 # HORÁRIO 03H
