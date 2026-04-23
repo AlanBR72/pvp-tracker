@@ -268,7 +268,7 @@ def analisar_pvp():
             # =========================
             # 🔥 CACHE CORRETO (NÃO DUPLICA MESMA KILL ENTRE PLAYERS)
             # =========================
-            cache_key = base.strip().lower()  # IGNORA ts (IMPORTANTE)
+            cache_key = normalizar_kill(base)[0] + "|" + limpar_nome(normalizar_kill(base)[1])  # IGNORA ts (IMPORTANTE)
 
             if cache_key in PVP_CACHE:
                 continue
@@ -276,6 +276,7 @@ def analisar_pvp():
             PVP_CACHE.add(cache_key)
 
             # salva histórico global
+            if not any(base.strip().lower() == e[0].strip().lower() for e in ULTIMOS_PVP_VIRTUE):
             ULTIMOS_PVP_VIRTUE.append((base, tempo, ts))
 
             if len(ULTIMOS_PVP_VIRTUE) > 200:
@@ -396,7 +397,7 @@ def montar_msg():
 
     filtrados.sort(key=lambda x: x[3], reverse=True)
 
-    for icon, base, tempo, ts in filtrados[:10]:
+    for icon, base, tempo, ts in filtrados = sorted(filtrados, key=lambda x: x[3], reverse=True)
 
         killers, morto = normalizar_kill(base)
 
