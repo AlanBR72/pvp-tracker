@@ -181,7 +181,12 @@ def montar_msg_virtue():
 
     filtrados = []
 
-    for base, tempo, ts, ordem in eventos:
+    for e in eventos:
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
 
         killers, morto = normalizar_kill(base)
 
@@ -318,7 +323,7 @@ def analisar_pvp():
                 print(f"🟦 {base} [{tempo}]")
 
                 log[log_key] = True
-                novas_kills.append(("VIRTUE", base, tempo, ts))
+                novas_kills.append(("VIRTUE", base, tempo, ts, created_at))
 
                 for k in killers_lista:
                     k_norm = limpar_nome(k)
@@ -330,7 +335,7 @@ def analisar_pvp():
                 print(f"🟥 {base} [{tempo}]")
 
                 log[log_key] = True
-                novas_kills.append(("PEACE", base, tempo, ts))
+                novas_kills.append(("PEACE", base, tempo, ts, created_at))
 
                 for k in killers_lista:
                     k_norm = limpar_nome(k)
@@ -385,12 +390,19 @@ def montar_msg():
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # 🔥 agora FEED tem 4 valores
-    eventos = [e for e in FEED if e[2] is not None]
+    # 🔥 aceita eventos antigos e novos
+    eventos = [e for e in FEED if len(e) >= 3 and e[2] is not None]
 
     filtrados = []
 
-    for base, tempo, ts, created_at in eventos:
+    for e in eventos:
+
+        # 🔥 padronização (resolve TODOS erros)
+        if len(e) == 4:
+            base, tempo, ts, created_at = e
+        else:
+            base, tempo, ts = e
+            created_at = time.time()  # fallback seguro
 
         killers, morto = normalizar_kill(base)
 
@@ -411,10 +423,9 @@ def montar_msg():
 
             icon = "🟦" if killer_virtue and morto_peace else "🟥"
 
-            # 🔥 agora guarda ORDEM também
             filtrados.append((icon, base, tempo, ts, created_at))
 
-    # 🔥 ordena pela ORDEM REAL (mais confiável que ts)
+    # 🔥 ordena pelo tempo REAL de chegada (perfeito pro Discord)
     filtrados.sort(key=lambda x: x[4], reverse=True)
 
     for icon, base, tempo, ts, created_at in filtrados[:10]:
@@ -457,7 +468,12 @@ def resumo_diario(stats):
     mortes_peace = 0
 
     # 🔥 FILTRA PELO TEMPO REAL
-    for base, tempo, ts, added_at in FEED:
+    for e in eventos:
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
 
         if added_at < limite:
             continue
