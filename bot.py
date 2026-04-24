@@ -230,13 +230,14 @@ def montar_msg_virtue():
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-            killers_lista = normalizar_kill(base)[0].split(" & ")
-            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
-            morto = e["victim"]
-            
-            msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
+            killers_str, morto = normalizar_kill(base)
 
-    msg += f"\n**⏱️ Atualizado:** _{agora}_"
+            killers_lista = killers_str.split(" & ")
+            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
+            morto_fmt = f"**{morto}**"
+
+            msg += f"{killers_fmt} → {morto_fmt} _({tempo})_\n"
+            msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
 
@@ -314,12 +315,17 @@ def analisar_pvp():
             killers_lista = e["killers"]
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto = e["victim"]
+            base = e["texto"]
 
-            # 🔥 APPEND-ONLY (com timestamp real)
+            if hasattr(ts, "timestamp"):
+                timestamp = int(ts.timestamp())
+            else:
+                timestamp = int(ts)
+
             evento = {
                 "killers": killers_lista,
                 "victim": morto,
-                "timestamp": int(ts.timestamp()),
+                "timestamp": timestamp,
                 "texto": base,
                 "tempo": tempo
             }
@@ -414,12 +420,10 @@ def normalizar_evento(e):
             tempo = e[1]
             ts = e[2]
 
-            killers_str, morto = normalizar_kill(base)
-
             return {
                 "killers": killers_str.split(" & ") if killers_str else [],
                 "victim": morto,
-                "timestamp": int(ts.timestamp()) if hasattr(ts, "timestamp") else 0,
+                "timestamp": int(ts.timestamp()) if hasattr(ts, "timestamp") else int(ts),
                 "tempo": tempo,
                 "texto": base
             }
