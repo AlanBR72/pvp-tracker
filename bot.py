@@ -144,7 +144,7 @@ def pegar_pvp(nome):
                 # 🔥 FILTRO DE LIXO REAL
                 # =========================
                 if (
-                    not base
+                    not 
                     or not tempo
                     or tempo.strip() == ""
                     or tempo.strip() == "[]"
@@ -160,7 +160,7 @@ def pegar_pvp(nome):
                 if not ts:
                     continue
 
-                eventos.append((base.strip(), tempo.strip(), ts))
+                eventos.append((.strip(), tempo.strip(), ts))
 
                 atual = []
 
@@ -180,7 +180,7 @@ def ultimos_pvp_virtue():
     # ordena por tempo real
     eventos = sorted(FEED, key=lambda x: x["timestamp"], reverse=True)
     
-    # ❌ NÃO remove duplicados por base
+    # ❌ NÃO remove duplicados por 
     return eventos
 
 def montar_msg_virtue():
@@ -204,14 +204,12 @@ def montar_msg_virtue():
         if not base or "killed" not in base:
             continue
 
-        killers, morto = normalizar_kill(base)
-
         if not killers or not morto:
             continue
 
-        killers_lista = killers.split(" & ")
+        killers_lista = e["killers"]
         killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
+        morto = e["victim"]
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         morto_virtue = morto_norm in MEMBROS_VIRTUE
@@ -233,11 +231,9 @@ def montar_msg_virtue():
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-            killers, morto = normalizar_kill(base)
-
-            killers_lista = killers.split(" & ")
+            killers_lista = e["killers"]
             killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
-            morto_fmt = f"**{e['victim']}**"
+            morto = e["victim"]
             
             msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
 
@@ -316,14 +312,12 @@ def analisar_pvp():
             if not base or "killed" not in base:
                 continue
 
-            killers, morto = normalizar_kill(base)
-
             if not killers or not morto:
                 continue
 
-            killers_lista = re.split(r" & | , ", killers)
+            killers_lista = e["killers"]
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
-            morto_norm = limpar_nome(morto).strip()
+            morto = e["victim"]
 
             # 🔥 APPEND-ONLY (com timestamp real)
             evento = {
@@ -424,8 +418,6 @@ def normalizar_evento(e):
             tempo = e[1]
             ts = e[2]
 
-            killers, morto = normalizar_kill(base)
-
             return {
                 "killers": killers.split(" & "),
                 "victim": morto,
@@ -467,14 +459,12 @@ def montar_msg():
         ts = e["timestamp"]
         tempo = e["tempo"]
 
-        killers, morto = normalizar_kill(base)
-
         if not killers or not morto:
             continue
 
-        killers_lista = killers.split(" & ")
+        killers_lista = e["killers"]
         killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
+        morto = e["victim"]
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
@@ -496,15 +486,13 @@ def montar_msg():
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-        killers, morto = normalizar_kill(base)
-
         if not killers or not morto:
             continue
 
-        killers_lista = killers.split(" & ")
+        killers_lista = e["killers"]
 
         killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
-        morto_fmt = f"**{e['victim']}**"
+        morto = e["victim"]
 
         msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
 
@@ -546,15 +534,13 @@ def resumo_diario(stats):
 
         if added_at < limite:
             continue
-
-        killers, morto = normalizar_kill(base)
-
+            
         if not killers or not morto:
             continue
 
-        killers_lista = killers.split(" & ")
+        killers_lista = e["killers"]
         killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
+        morto = e["victim"]
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
