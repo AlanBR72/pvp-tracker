@@ -144,7 +144,7 @@ def pegar_pvp(nome):
                 # 🔥 FILTRO DE LIXO REAL
                 # =========================
                 if (
-                    not 
+                    not base
                     or not tempo
                     or tempo.strip() == ""
                     or tempo.strip() == "[]"
@@ -160,7 +160,7 @@ def pegar_pvp(nome):
                 if not ts:
                     continue
 
-                eventos.append((.strip(), tempo.strip(), ts))
+                eventos.append((base.strip(), tempo.strip(), ts))
 
                 atual = []
 
@@ -231,8 +231,8 @@ def montar_msg_virtue():
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-            killers_lista = e["killers"]
-            killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
+            killers_lista = normalizar_kill(base)[0].split(" & ")
+            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
             morto = e["victim"]
             
             msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
@@ -443,28 +443,18 @@ def montar_msg():
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = [e for e in FEED if len(e) >= 3]
+    eventos = sorted(FEED, key=lambda x: x["timestamp"], reverse=True)
 
-    filtrados = []
+    count = 0
 
     for e in eventos:
 
-        e = normalizar_evento(e)
-
-        if not e:
-            continue
-
-        killers = e["killers"]
+        killers_lista = e["killers"]
         morto = e["victim"]
-        ts = e["timestamp"]
         tempo = e["tempo"]
 
-        if not killers or not morto:
-            continue
-
-        killers_lista = e["killers"]
         killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto = e["victim"]
+        morto_norm = limpar_nome(morto)
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
@@ -476,27 +466,16 @@ def montar_msg():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            filtrados.append((icon, base, tempo, ts, ordem))
+            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
+            morto_fmt = f"**{morto}**"
 
-    # 🔥 ordena por ordem real (melhor que tempo texto)
-    filtrados.sort(
-        key=lambda x: x[3],  # usa só datetime real
-        reverse=True
-    )
+            msg += f"{icon} {killers_fmt} → {morto_fmt} _({tempo})_\n"
 
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
+            count += 1
+            if count >= 10:
+                break
 
-        if not killers or not morto:
-            continue
-
-        killers_lista = e["killers"]
-
-        killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
-        morto = e["victim"]
-
-        msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
-
-    return msg[:1900]
+    return msg
     
 # =========================
 # RESUMO DIÁRIO
