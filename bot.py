@@ -172,11 +172,14 @@ def pegar_pvp(nome):
     
 def ultimos_pvp_virtue():
 
-    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
+    agora = int(datetime.now(BRASIL).timestamp())
+    limite = agora - (2 * 3600)  # 2 horas
+
+    eventos = [e for e in eventos if e["timestamp"] >= limite]
 
     # ordena por tempo real
-    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
-
+    eventos = sorted(FEED, key=lambda x: x["timestamp"], reverse=True)
+    
     # ❌ NÃO remove duplicados por base
     return eventos
 
@@ -233,10 +236,10 @@ def montar_msg_virtue():
             killers, morto = normalizar_kill(base)
 
             killers_lista = killers.split(" & ")
-            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-            morto_fmt = f"**{morto.strip()}**"
-
-            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+            killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
+            morto_fmt = f"**{e['victim']}**"
+            
+            msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
 
     msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
@@ -314,7 +317,17 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # 🔥 APPEND-ONLY (com timestamp real)
-            FEED.append((base, tempo, ts or 0, time.time()))
+            evento = {
+                "killers": killers_lista,
+                "victim": morto,
+                "timestamp": int(ts.timestamp()),
+                "texto": base,
+                "tempo": tempo
+            }
+
+            # evita duplicado
+            if evento["timestamp"] and evento not in FEED:
+                FEED.append(evento)
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -445,10 +458,10 @@ def montar_msg():
 
         killers_lista = killers.split(" & ")
 
-        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-        morto_fmt = f"**{morto.strip()}**"
+        killers_fmt = " + ".join([f"**{k}**" for k in e["killers"]])
+        morto_fmt = f"**{e['victim']}**"
 
-        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+        msg += f"{killers_fmt} → {morto_fmt} _({formatar_tempo_curto(e['tempo'])})_\n"
 
     return msg[:1900]
     
