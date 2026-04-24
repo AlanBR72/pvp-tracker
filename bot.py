@@ -425,7 +425,7 @@ def montar_msg():
 
             base = e.get("texto")
             tempo = e.get("tempo")
-            ts = e.get("timestamp")
+            ts = datetime.fromtimestamp(e["timestamp"])
 
         # 🔥 FORMATO ANTIGO (tupla)
         else:
@@ -509,7 +509,7 @@ def resumo_diario(stats):
 
             base = e.get("texto")
             tempo = e.get("tempo")
-            ts = e.get("timestamp")
+            ts = datetime.fromtimestamp(e["timestamp"])
 
         # 🔥 FORMATO ANTIGO (tupla)
         else:
