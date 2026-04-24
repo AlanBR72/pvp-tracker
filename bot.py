@@ -222,7 +222,13 @@ def montar_msg_virtue():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena por chegada real
-    filtrados.sort(key=lambda x: x[4])  # ordem do site
+    filtrados.sort(
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime) else 0,
+            x[4]
+        ),
+        reverse=True
+    )
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
     else:
@@ -430,7 +436,13 @@ def montar_msg():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
-    filtrados.sort(key=lambda x: x[4])  # ordem do site
+    filtrados.sort(
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime) else 0,
+            x[4]
+        ),
+        reverse=True
+    )
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:
 
