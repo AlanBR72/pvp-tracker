@@ -44,6 +44,64 @@ def get_ordem(e):
         return e[3]
     return 0
 
+def normalizar_kill(e):
+
+    try:
+        # remove tempo
+        base = e.split(" - ")[0].strip()
+
+        partes = base.split("killed", 1)
+
+        if len(partes) != 2:
+            return [], ""
+
+        killers_txt, morto = partes
+
+        # padroniza separadores
+        killers_txt = killers_txt.replace(" and ", ",")
+        killers_lista = [k.strip() for k in killers_txt.split(",") if k.strip()]
+
+        # killers_lista = sorted(killers_lista)
+
+        killers_norm = " & ".join(killers_lista)
+
+        return killers_norm, morto.strip()
+
+    except:
+        return [], ""
+
+def normalizar_evento(e):
+
+    # 🔥 se já for dict (novo formato)
+    if isinstance(e, dict):
+        return {
+            "killers": e.get("killers", []),
+            "victim": e.get("victim", ""),
+            "timestamp": e.get("timestamp", 0),
+            "tempo": e.get("tempo", ""),
+            "texto": e.get("texto", "")
+        }
+
+    # 🔥 se for tupla antiga
+    elif isinstance(e, (list, tuple)):
+
+        if len(e) >= 3:
+            base = e[0]
+            tempo = e[1]
+            ts = e[2]
+
+            killers, morto = normalizar_kill(base)
+
+            return {
+                "killers": killers.split(" & "),
+                "victim": morto,
+                "timestamp": int(ts.timestamp()) if hasattr(ts, "timestamp") else 0,
+                "tempo": tempo,
+                "texto": base
+            }
+
+    return None
+
 # =========================
 # DISCORD
 # =========================
@@ -377,32 +435,6 @@ def analisar_pvp():
     print(f"\n✅ Novas kills detectadas: {len(novas_kills)}\n")
 
     return novas_kills, stats
-
-def normalizar_kill(e):
-
-    try:
-        # remove tempo
-        base = e.split(" - ")[0].strip()
-
-        partes = base.split("killed", 1)
-
-        if len(partes) != 2:
-            return [], ""
-
-        killers_txt, morto = partes
-
-        # padroniza separadores
-        killers_txt = killers_txt.replace(" and ", ",")
-        killers_lista = [k.strip() for k in killers_txt.split(",") if k.strip()]
-
-        # killers_lista = sorted(killers_lista)
-
-        killers_norm = " & ".join(killers_lista)
-
-        return killers_norm, morto.strip()
-
-    except:
-        return [], ""
 
 def limpar_nome(nome):
     nome = unicodedata.normalize("NFKC", nome)
