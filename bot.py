@@ -184,8 +184,7 @@ def montar_msg_virtue():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
-    msg = "⚔️ **ULTIMOS PvPs — VIRTUE** ⚔️\n\n"
-    msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg = "⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
 
     filtrados = []
 
@@ -368,13 +367,18 @@ def normalizar_kill(e):
         # remove tempo
         base = e.split(" - ")[0].strip()
 
-        killers_txt, morto = base.split("killed")
+        partes = base.split("killed", 1)
+
+        if len(partes) != 2:
+            return [], ""
+
+        killers_txt, morto = partes
 
         # padroniza separadores
         killers_txt = killers_txt.replace(" and ", ",")
         killers_lista = [k.strip() for k in killers_txt.split(",") if k.strip()]
 
-        killers_lista = sorted(killers_lista)
+        # killers_lista = sorted(killers_lista)
 
         killers_norm = " & ".join(killers_lista)
 
@@ -395,10 +399,7 @@ def limpar_nome(nome):
 
 def montar_msg():
 
-    agora = datetime.now(BRASIL).strftime("%H:%M")
-
-    msg = "⚔️ **PVP TRACKER — VIRTUE vs PEACE** ⚔️\n\n"
-    msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     eventos = [e for e in FEED if len(e) >= 3]
@@ -459,8 +460,6 @@ def montar_msg():
 
         msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
-    msg += f"\n**⏱️ Atualizado:** _{agora}_"
-
     return msg[:1900]
     
 # =========================
@@ -473,7 +472,7 @@ def top3(d):
 def resumo_diario(stats):
 
     agora_ts = time.time()
-    limite = agora_ts - (23 * 60 * 60)  # 23 horas
+    limite = agora_ts - (24 * 60 * 60)  # 24 horas
 
     msg = "📊 **RESUMO PVP — VIRTUE vs PEACE** 📊\n\n"
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
