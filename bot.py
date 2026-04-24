@@ -195,7 +195,6 @@ def montar_msg_virtue():
             base, tempo, ts, ordem = e
         elif len(e) == 3:
             base, tempo, ts = e
-            ordem = time.time()
         else:
             continue  # ignora lixo
 
@@ -223,11 +222,7 @@ def montar_msg_virtue():
 
     # 🔥 ordena por chegada real
     filtrados.sort(
-        key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
-        ),
+        key=lambda x: x[3],  # usa só datetime real
         reverse=True
     )
     if not filtrados:
@@ -413,7 +408,6 @@ def montar_msg():
             base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            ordem = time.time()
 
         killers, morto = normalizar_kill(base)
 
@@ -438,11 +432,7 @@ def montar_msg():
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(
-        key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
-        ),
+        key=lambda x: x[3],  # usa só datetime real
         reverse=True
     )
 
@@ -489,7 +479,6 @@ def resumo_diario(stats):
             base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            ordem = time.time()
 
         if added_at < limite:
             continue
@@ -594,57 +583,6 @@ def segundos_ate_3h():
 
     return (alvo - agora).total_seconds()
 
-def montar_bloco_virtue_pvp():
-
-    msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
-
-    eventos = [e for e in FEED if len(e) >= 3]
-
-    filtrados = []
-
-    for e in eventos:
-
-        # 🔥 compatível com tudo (antigo + novo)
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
-        else:
-            base, tempo, ts = e
-            ordem = time.time()
-
-        killers, morto = normalizar_kill(base)
-
-        if not killers or not morto:
-            continue
-
-        killers_lista = killers.split(" & ")
-        killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
-
-        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
-        morto_virtue = morto_norm in MEMBROS_VIRTUE
-
-        # 🔥 Virtue vs QUALQUER UM
-        if killer_virtue or morto_virtue:
-
-            icon = "🟦" if killer_virtue else "🟥"
-
-            filtrados.append((icon, base, tempo, ts, ordem))
-
-    # 🔥 ordena pela ordem real
-    filtrados.sort(
-        key=lambda x: x[4],
-        reverse=True
-    )
-
-    if not filtrados:
-        msg += "_Nenhum PvP encontrado._\n"
-        return msg
-
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
-        msg += f"{icon} {base} - _[{tempo}]_\n"
-
-    return msg
-
 def tempo_para_segundos(tempo):
 
     tempo = tempo.lower().replace("about ", "").strip()
@@ -669,7 +607,7 @@ def tempo_para_segundos(tempo):
 
 def tempo_para_datetime(txt):
 
-    now = datetime.now()
+    now = datetime.now(BRASIL)
 
     txt = txt.lower()
 
