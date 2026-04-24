@@ -316,6 +316,7 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # 🔥 APPEND-ONLY (com timestamp real)
+            if not any(e[0] == base and e[1] == tempo for e in FEED):
             FEED.append((base, tempo, ts, ordem))
 
             if len(FEED) > 500:
