@@ -160,11 +160,7 @@ def pegar_pvp(nome):
                 if not ts:
                     continue
 
-                for i, palavra in enumerate(tokens):
-
-                    ordem = len(eventos)  # ordem natural do site
-
-                    eventos.append((base.strip(), tempo.strip(), ts, ordem))
+                eventos.append((base.strip(), tempo.strip(), ts))
 
                 atual = []
 
@@ -300,8 +296,8 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 CORRETO: eventos tem 4 valores
-        for base, tempo, ts, ordem in eventos:
+        # 🔥 CORRETO: eventos tem 3 valores
+        for base, tempo, ts in eventos:
 
             if not base or "killed" not in base:
                 continue
@@ -316,8 +312,7 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # 🔥 APPEND-ONLY (com timestamp real)
-            if not any(e[0] == base and e[1] == tempo for e in FEED):
-                FEED.append((base, tempo, ts, ordem))
+            FEED.append((base, tempo, ts or 0, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -584,57 +579,6 @@ def segundos_ate_3h():
         alvo += timedelta(days=1)
 
     return (alvo - agora).total_seconds()
-
-def montar_bloco_virtue_pvp():
-
-    msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
-
-    eventos = [e for e in FEED if len(e) >= 3]
-
-    filtrados = []
-
-    for e in eventos:
-
-        # 🔥 compatível com tudo (antigo + novo)
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
-        else:
-            base, tempo, ts = e
-            ordem = time.time()
-
-        killers, morto = normalizar_kill(base)
-
-        if not killers or not morto:
-            continue
-
-        killers_lista = killers.split(" & ")
-        killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto_norm = limpar_nome(morto)
-
-        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
-        morto_virtue = morto_norm in MEMBROS_VIRTUE
-
-        # 🔥 Virtue vs QUALQUER UM
-        if killer_virtue or morto_virtue:
-
-            icon = "🟦" if killer_virtue else "🟥"
-
-            filtrados.append((icon, base, tempo, ts, ordem))
-
-    # 🔥 ordena pela ordem real
-    filtrados.sort(
-        key=lambda x: x[4],
-        reverse=True
-    )
-
-    if not filtrados:
-        msg += "_Nenhum PvP encontrado._\n"
-        return msg
-
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
-        msg += f"{icon} {base} - _[{tempo}]_\n"
-
-    return msg
 
 def tempo_para_segundos(tempo):
 
