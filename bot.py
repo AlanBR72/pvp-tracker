@@ -302,7 +302,11 @@ def analisar_pvp():
         eventos = pegar_pvp(nome)
 
         # 🔥 CORRETO: eventos tem 3 valores
-        for base, tempo, ts in eventos:
+        for e in eventos:
+
+            base = e["texto"]
+            tempo = e["tempo"]
+            ts = e["timestamp"]
 
             if not base or "killed" not in base:
                 continue
@@ -416,11 +420,22 @@ def montar_msg():
 
     for e in eventos:
 
-        # 🔥 compatível com 3 ou 4 valores
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
+        # 🔥 NOVO FORMATO (dict)
+        if isinstance(e, dict):
+
+            base = e.get("texto")
+            tempo = e.get("tempo")
+            ts = e.get("timestamp")
+
+        # 🔥 FORMATO ANTIGO (tupla)
         else:
-            base, tempo, ts = e
+
+            if len(e) == 4:
+                base, tempo, ts, ordem = e
+            elif len(e) == 3:
+                base, tempo, ts = e
+            else:
+                continue
 
         killers, morto = normalizar_kill(base)
 
@@ -488,10 +503,23 @@ def resumo_diario(stats):
 
     # 🔥 FILTRA PELO TEMPO REAL
     for e in eventos:
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
+
+        # 🔥 NOVO FORMATO (dict)
+        if isinstance(e, dict):
+
+            base = e.get("texto")
+            tempo = e.get("tempo")
+            ts = e.get("timestamp")
+
+        # 🔥 FORMATO ANTIGO (tupla)
         else:
-            base, tempo, ts = e
+
+            if len(e) == 4:
+                base, tempo, ts, ordem = e
+            elif len(e) == 3:
+                base, tempo, ts = e
+            else:
+                continue
 
         if added_at < limite:
             continue
