@@ -315,6 +315,7 @@ def analisar_pvp():
             killers_lista = e["killers"]
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto = e["victim"]
+            morto_norm = limpar_nome(morto)
             base = e["texto"]
 
             if hasattr(ts, "timestamp"):
