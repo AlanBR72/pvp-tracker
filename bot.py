@@ -172,15 +172,12 @@ def pegar_pvp(nome):
     
 def ultimos_pvp_virtue():
 
-    agora = int(datetime.now(BRASIL).timestamp())
-    limite = agora - (2 * 3600)  # 2 horas
-
-    eventos = [e for e in eventos if e["timestamp"] >= limite]
+    eventos = [e for e in ULTIMOS_PVP_VIRTUE if isinstance(e[2], datetime)]
 
     # ordena por tempo real
-    eventos = sorted(FEED, key=lambda x: x["timestamp"], reverse=True)
-    
-    # ❌ NÃO remove duplicados por 
+    eventos = sorted(eventos, key=lambda x: x[2] or datetime.min, reverse=True)
+
+    # ❌ NÃO remove duplicados por base
     return eventos
 
 def montar_msg_virtue():
@@ -198,19 +195,23 @@ def montar_msg_virtue():
             base, tempo, ts, ordem = e
         elif len(e) == 3:
             base, tempo, ts = e
+            ordem = time.time()
         else:
             continue  # ignora lixo
 
-        killers_lista = e["killers"]
-        morto = e["victim"]
-
-        if not killers_lista or not morto:
+        if not base or "killed" not in base:
             continue
 
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
         killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
-        morto_norm = limpar_nome(morto)
         morto_virtue = morto_norm in MEMBROS_VIRTUE
 
         # 🔥 Virtue vs QUALQUER UM
@@ -222,7 +223,11 @@ def montar_msg_virtue():
 
     # 🔥 ordena por chegada real
     filtrados.sort(
-        key=lambda x: x[3],  # usa só datetime real
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime)
+            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
+            else x[4]
+        ),
         reverse=True
     )
     if not filtrados:
@@ -230,14 +235,15 @@ def montar_msg_virtue():
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-            killers_str, morto = normalizar_kill(base)
+            killers, morto = normalizar_kill(base)
 
-            killers_lista = killers_str.split(" & ")
-            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
-            morto_fmt = f"**{morto}**"
+            killers_lista = killers.split(" & ")
+            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+            morto_fmt = f"**{morto.strip()}**"
 
-            msg += f"{killers_fmt} → {morto_fmt} _({tempo})_\n"
-            msg += f"\n**⏱️ Atualizado:** _{agora}_"
+            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+
+    msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
 
@@ -297,43 +303,23 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        for e in eventos:
+        # 🔥 CORRETO: eventos tem 3 valores
+        for base, tempo, ts in eventos:
 
-            e = normalizar_evento(e)
-
-            if not e:
+            if not base or "killed" not in base:
                 continue
 
-            killers = e["killers"]
-            morto = e["victim"]
-            ts = e["timestamp"]
-            tempo = e["tempo"]
+            killers, morto = normalizar_kill(base)
 
             if not killers or not morto:
                 continue
 
-            killers_lista = e["killers"]
+            killers_lista = re.split(r" & | , ", killers)
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
-            morto = e["victim"]
-            morto_norm = limpar_nome(morto)
-            base = e["texto"]
+            morto_norm = limpar_nome(morto).strip()
 
-            if hasattr(ts, "timestamp"):
-                timestamp = int(ts.timestamp())
-            else:
-                timestamp = int(ts)
-
-            evento = {
-                "killers": killers_lista,
-                "victim": morto,
-                "timestamp": timestamp,
-                "texto": base,
-                "tempo": tempo
-            }
-
-            # evita duplicado
-            if evento["timestamp"] and evento not in FEED:
-                FEED.append(evento)
+            # 🔥 APPEND-ONLY (com timestamp real)
+            FEED.append((base, tempo, ts or 0, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -401,43 +387,6 @@ def normalizar_kill(e):
     except:
         return [], ""
 
-def normalizar_evento(e):
-
-    # 🔥 se já for dict (novo formato)
-    if isinstance(e, dict):
-        return {
-            "killers": e.get("killers", []),
-            "victim": e.get("victim", ""),
-            "timestamp": e.get("timestamp", 0),
-            "tempo": e.get("tempo", ""),
-            "texto": e.get("texto", "")
-        }
-
-    # 🔥 se for tupla antiga
-    elif isinstance(e, (list, tuple)):
-
-        if len(e) >= 3:
-            base = e[0]
-            tempo = e[1]
-            ts = e[2]
-
-            killers_str, morto = normalizar_kill(base)
-
-            if hasattr(ts, "timestamp"):
-                timestamp = int(ts.timestamp())
-            else:
-                timestamp = int(ts)
-
-            return {
-                "killers": killers_str.split(" & ") if killers_str else [],
-                "victim": morto,
-                "timestamp": timestamp,
-                "tempo": tempo,
-                "texto": base
-            }
-
-    return None
-
 def limpar_nome(nome):
     nome = unicodedata.normalize("NFKC", nome)
     nome = nome.replace("\u00a0", " ")  # NBSP
@@ -453,16 +402,25 @@ def montar_msg():
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = sorted(FEED, key=lambda x: x["timestamp"], reverse=True)
+    eventos = [e for e in FEED if len(e) >= 3]
 
-    count = 0
+    filtrados = []
 
     for e in eventos:
 
-        killers_lista = e["killers"]
-        morto = e["victim"]
-        tempo = e["tempo"]
+        # 🔥 compatível com 3 ou 4 valores
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
 
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
         killers_norm = [limpar_nome(k) for k in killers_lista]
         morto_norm = limpar_nome(morto)
 
@@ -476,16 +434,33 @@ def montar_msg():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            killers_fmt = " + ".join([f"**{k}**" for k in killers_lista])
-            morto_fmt = f"**{morto}**"
+            filtrados.append((icon, base, tempo, ts, ordem))
 
-            msg += f"{icon} {killers_fmt} → {morto_fmt} _({tempo})_\n"
+    # 🔥 ordena por ordem real (melhor que tempo texto)
+    filtrados.sort(
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime)
+            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
+            else x[4]
+        ),
+        reverse=True
+    )
 
-            count += 1
-            if count >= 10:
-                break
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-    return msg
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+
+        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+        morto_fmt = f"**{morto.strip()}**"
+
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+
+    return msg[:1900]
     
 # =========================
 # RESUMO DIÁRIO
@@ -509,31 +484,27 @@ def resumo_diario(stats):
     mortes_peace = 0
 
     # 🔥 FILTRA PELO TEMPO REAL
-    for e in FEED:
+    for e in eventos:
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
 
-        e = normalizar_evento(e)
-
-        if not e:
+        if added_at < limite:
             continue
 
-        killers = e["killers"]
-        morto = e["victim"]
-        ts = e["timestamp"]
-        tempo = e["tempo"]
+        killers, morto = normalizar_kill(base)
 
-        if e["timestamp"] < limite:
-            continue
-            
         if not killers or not morto:
             continue
 
-        killers_lista = e["killers"]
+        killers_lista = killers.split(" & ")
         killers_norm = [limpar_nome(k) for k in killers_lista]
-        morto = e["victim"]
+        morto_norm = limpar_nome(morto)
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
-        morto_norm = limpar_nome(morto)
 
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
@@ -623,6 +594,57 @@ def segundos_ate_3h():
 
     return (alvo - agora).total_seconds()
 
+def montar_bloco_virtue_pvp():
+
+    msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
+
+    eventos = [e for e in FEED if len(e) >= 3]
+
+    filtrados = []
+
+    for e in eventos:
+
+        # 🔥 compatível com tudo (antigo + novo)
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+
+        # 🔥 Virtue vs QUALQUER UM
+        if killer_virtue or morto_virtue:
+
+            icon = "🟦" if killer_virtue else "🟥"
+
+            filtrados.append((icon, base, tempo, ts, ordem))
+
+    # 🔥 ordena pela ordem real
+    filtrados.sort(
+        key=lambda x: x[4],
+        reverse=True
+    )
+
+    if not filtrados:
+        msg += "_Nenhum PvP encontrado._\n"
+        return msg
+
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
+        msg += f"{icon} {base} - _[{tempo}]_\n"
+
+    return msg
+
 def tempo_para_segundos(tempo):
 
     tempo = tempo.lower().replace("about ", "").strip()
@@ -647,7 +669,7 @@ def tempo_para_segundos(tempo):
 
 def tempo_para_datetime(txt):
 
-    now = datetime.now(BRASIL)
+    now = datetime.now()
 
     txt = txt.lower()
 
