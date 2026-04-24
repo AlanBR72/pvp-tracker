@@ -300,8 +300,8 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 CORRETO: eventos tem 3 valores
-        for base, tempo, ts in eventos:
+        # 🔥 CORRETO: eventos tem 4 valores
+        for base, tempo, ts, ordem in eventos:
 
             if not base or "killed" not in base:
                 continue
