@@ -201,17 +201,16 @@ def montar_msg_virtue():
         else:
             continue  # ignora lixo
 
-        if not base or "killed" not in base:
-            continue
-
-        if not killers or not morto:
-            continue
-
         killers_lista = e["killers"]
-        killers_norm = [limpar_nome(k) for k in killers_lista]
         morto = e["victim"]
 
+        if not killers_lista or not morto:
+            continue
+
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        morto_norm = limpar_nome(morto)
         morto_virtue = morto_norm in MEMBROS_VIRTUE
 
         # 🔥 Virtue vs QUALQUER UM
@@ -308,9 +307,6 @@ def analisar_pvp():
             morto = e["victim"]
             ts = e["timestamp"]
             tempo = e["tempo"]
-
-            if not base or "killed" not in base:
-                continue
 
             if not killers or not morto:
                 continue
@@ -418,8 +414,10 @@ def normalizar_evento(e):
             tempo = e[1]
             ts = e[2]
 
+            killers_str, morto = normalizar_kill(base)
+
             return {
-                "killers": killers.split(" & "),
+                "killers": killers_str.split(" & ") if killers_str else [],
                 "victim": morto,
                 "timestamp": int(ts.timestamp()) if hasattr(ts, "timestamp") else 0,
                 "tempo": tempo,
@@ -499,7 +497,7 @@ def resumo_diario(stats):
     mortes_peace = 0
 
     # 🔥 FILTRA PELO TEMPO REAL
-    for e in eventos:
+    for e in FEED:
 
         e = normalizar_evento(e)
 
@@ -511,7 +509,7 @@ def resumo_diario(stats):
         ts = e["timestamp"]
         tempo = e["tempo"]
 
-        if added_at < limite:
+        if e["timestamp"] < limite:
             continue
             
         if not killers or not morto:
@@ -523,6 +521,7 @@ def resumo_diario(stats):
 
         killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
         killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
+        morto_norm = limpar_nome(morto)
 
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
