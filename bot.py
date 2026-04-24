@@ -160,7 +160,11 @@ def pegar_pvp(nome):
                 if not ts:
                     continue
 
-                eventos.append((base.strip(), tempo.strip(), ts))
+                for i, palavra in enumerate(tokens):
+
+                    ordem = len(eventos)  # ordem natural do site
+
+                    eventos.append((base.strip(), tempo.strip(), ts, ordem))
 
                 atual = []
 
@@ -222,14 +226,7 @@ def montar_msg_virtue():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena por chegada real
-    filtrados.sort(
-        key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
-        ),
-        reverse=True
-    )
+    filtrados.sort(key=lambda x: x[4])  # ordem do site
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
     else:
@@ -319,7 +316,7 @@ def analisar_pvp():
             morto_norm = limpar_nome(morto).strip()
 
             # 🔥 APPEND-ONLY (com timestamp real)
-            FEED.append((base, tempo, ts or 0, time.time()))
+            FEED.append((base, tempo, ts, ordem))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -437,14 +434,7 @@ def montar_msg():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
-    filtrados.sort(
-        key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
-        ),
-        reverse=True
-    )
+    filtrados.sort(key=lambda x: x[4])  # ordem do site
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:
 
