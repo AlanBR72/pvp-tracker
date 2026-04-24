@@ -420,10 +420,17 @@ def normalizar_evento(e):
             tempo = e[1]
             ts = e[2]
 
+            killers_str, morto = normalizar_kill(base)
+
+            if hasattr(ts, "timestamp"):
+                timestamp = int(ts.timestamp())
+            else:
+                timestamp = int(ts)
+
             return {
                 "killers": killers_str.split(" & ") if killers_str else [],
                 "victim": morto,
-                "timestamp": int(ts.timestamp()) if hasattr(ts, "timestamp") else int(ts),
+                "timestamp": timestamp,
                 "tempo": tempo,
                 "texto": base
             }
