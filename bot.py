@@ -98,71 +98,86 @@ def pegar_pvp(nome):
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Connection": "keep-alive"
-        }
+        # 🔥 sessão persistente (MUITO importante)
+        if not hasattr(pegar_pvp, "session"):
+            pegar_pvp.session = requests.Session()
+            pegar_pvp.session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                              "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Connection": "keep-alive"
+            })
 
-        r = requests.get(url, headers=headers, timeout=10)
+        session = pegar_pvp.session
 
-        if r.status_code != 200:
-            print("⚠️ Falha HTTP:", r.status_code)
-            return []
+        # 🔁 retry automático
+        for tentativa in range(3):
 
-        texto = r.text
+            r = session.get(url, timeout=10)
 
-        if "Recent character kills and deaths" not in texto:
-            print("⚠️ Conteúdo não carregado (provável bloqueio)")
-            return []
+            if r.status_code != 200:
+                print(f"⚠️ HTTP {r.status_code} (tentativa {tentativa+1})")
+                time.sleep(1 + tentativa)
+                continue
 
-        soup = BeautifulSoup(texto, "html.parser")
-        texto = soup.get_text(" ")
+            texto = r.text
 
-        parte = texto.split("Recent character kills and deaths")[1]
-        tokens = parte.split()
+            if "Recent character kills and deaths" not in texto:
+                print("⚠️ Conteúdo não carregado (bloqueio leve)")
 
-        eventos = []
-        atual = []
+                # 🔥 espera progressiva
+                time.sleep(1.5 + tentativa)
+                continue
 
-        for palavra in tokens:
+            # ✔️ sucesso real
+            soup = BeautifulSoup(texto, "html.parser")
+            texto = soup.get_text(" ")
 
-            atual.append(palavra)
+            parte = texto.split("Recent character kills and deaths")[1]
+            tokens = parte.split()
 
-            if "ago" in palavra:
+            eventos = []
+            atual = []
 
-                frase = " ".join(atual)
+            for palavra in tokens:
 
-                if "killed" not in frase:
+                atual.append(palavra)
+
+                if "ago" in palavra:
+
+                    frase = " ".join(atual)
+
+                    if "killed" not in frase:
+                        atual = []
+                        continue
+
+                    if "-" in frase:
+                        base, tempo = frase.split("-", 1)
+                    else:
+                        base = frase
+                        tempo = ""
+
+                    base = base.strip()
+                    tempo = tempo.strip()
+
+                    if not base or not tempo:
+                        atual = []
+                        continue
+
+                    ts = tempo_para_datetime(tempo)
+
+                    if not ts:
+                        atual = []
+                        continue
+
+                    eventos.append((base, tempo, ts))
+
                     atual = []
-                    continue
 
-                # split seguro
-                if "-" in frase:
-                    base, tempo = frase.split("-", 1)
-                else:
-                    base = frase
-                    tempo = ""
+            return eventos
 
-                base = base.strip()
-                tempo = tempo.strip()
-
-                if not base or not tempo:
-                    atual = []
-                    continue
-
-                ts = tempo_para_datetime(tempo)
-
-                if not ts:
-                    atual = []
-                    continue
-
-                eventos.append((base, tempo, ts))
-
-                atual = []
-
-        return eventos
+        # ❌ falhou todas tentativas
+        return []
 
     except Exception as e:
         print("Erro pegar PvP:", e)
