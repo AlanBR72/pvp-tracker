@@ -95,75 +95,48 @@ def pegar_membros(url):
 
 def pegar_pvp(nome):
 
+    global ORDEM_GLOBAL
+
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+
+        if r.status_code != 200:
+            return []
+
         soup = BeautifulSoup(r.text, "html.parser")
 
         texto = soup.get_text(" ")
 
         if "Recent character kills and deaths" not in texto:
+            print("⚠️ Seção não encontrada")
             return []
 
         parte = texto.split("Recent character kills and deaths")[1]
-        tokens = parte.split()
 
         eventos = []
-        atual = []
 
-        for palavra in tokens:
+        matches = re.findall(
+            r"(.+? killed .+?)\s*[-•]?\s*(\d+ .*? ago)",
+            parte
+        )
 
-            atual.append(palavra)
+        for i, (base, tempo) in enumerate(matches):
 
-            if "ago" in palavra:
+            base = base.strip()
+            tempo = tempo.strip()
 
-                frase = " ".join(atual)
+            ts = tempo_para_datetime(tempo)
 
-                if "killed" not in frase:
-                    atual = []
-                    continue
+            if not ts:
+                continue
 
-                # =========================
-                # 🔥 SPLIT SEGURO
-                # =========================
-                if "-" in frase:
-                    parts = frase.split("-", 1)
+            # 🔥 ORDEM REAL DO SITE
+            ordem = ORDEM_GLOBAL
+            ORDEM_GLOBAL += 1
 
-                    if len(parts) < 2:
-                        atual = []
-                        continue
-
-                    base = parts[0].strip()
-                    tempo = parts[1].strip()
-
-                else:
-                    base = frase
-                    tempo = ""
-
-                # =========================
-                # 🔥 FILTRO DE LIXO REAL
-                # =========================
-                if (
-                    not base
-                    or not tempo
-                    or tempo.strip() == ""
-                    or tempo.strip() == "[]"
-                ):
-                    atual = []
-                    continue
-
-                # =========================
-                # 🔥 TIMESTAMP SAFE
-                # =========================
-                ts = tempo_para_datetime(tempo)
-
-                if not ts:
-                    continue
-
-                eventos.append((base.strip(), tempo.strip(), ts))
-
-                atual = []
+            eventos.append((base, tempo, ts, ordem))
 
         return eventos
 
@@ -247,7 +220,7 @@ def montar_msg_virtue():
     # =========================
     # 🔥 ORDENAÇÃO (mais recente primeiro)
     # =========================
-    filtrados.sort(key=lambda x: x[3] if isinstance(x[3], datetime) else datetime.fromtimestamp(x[3]), reverse=True)
+    filtrados.sort(key=lambda x: (-x[3].timestamp(), x[4]))
 
     # =========================
     # 🔥 OUTPUT
@@ -478,7 +451,7 @@ def montar_msg():
     # 🔥 ORDENAÇÃO IGUAL AO SITE
     # 1. GRUPO POR TEMPO (string)
     # 2. ORDEM ORIGINAL DO SITE
-    filtrados.sort(key=lambda x: (x[2], x[4]))
+    filtrados.sort(key=lambda x: (-x[3].timestamp(), x[4]))
 
     # 🔥 INVERTE GRUPOS (mais recente primeiro)
     filtrados.reverse()
