@@ -224,12 +224,11 @@ def montar_msg_virtue():
     # 🔥 ordena por chegada real
     filtrados.sort(
         key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
-        ),
-        reverse=True
+            -(x[3].timestamp() if isinstance(x[3], datetime) else x[3]),
+            x[4]  # 🔥 desempate = ordem do site
+        )
     )
+
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
     else:
@@ -303,7 +302,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 ORDEM REAL DO SITE
+        # 🔥 AQUI É A CHAVE: INDEX DO SITE
         for i, (base, tempo, ts) in enumerate(eventos):
 
             if not base or "killed" not in base:
@@ -318,10 +317,12 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # 🔥 ordem baseada no site (desempate perfeito)
-            ordem = -i
+            # =========================
+            # 🔥 ORDEM REAL DO SITE
+            # =========================
+            ordem = i  # quanto menor = mais recente no site
 
-            # 🔥 evita duplicado real
+            # 🔥 evita duplicados
             if not any(e[0] == base and e[1] == tempo for e in FEED):
                 FEED.append((base, tempo, ts or 0, ordem))
 
@@ -442,11 +443,9 @@ def montar_msg():
     # 🔥 ORDENAÇÃO PERFEITA (tempo + ordem do site)
     filtrados.sort(
         key=lambda x: (
-            x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) else 0,
-            x[4]
-        ),
-        reverse=True
+            -(x[3].timestamp() if isinstance(x[3], datetime) else x[3]),
+            x[4]  # 🔥 desempate = ordem do site
+        )
     )
 
     if not filtrados:
