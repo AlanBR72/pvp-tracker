@@ -33,6 +33,7 @@ MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
 ULTIMOS_PVP_VIRTUE = []
 FEED = []
+ORDEM_GLOBAL = 0
 
 def get_ts(e):
     if len(e) >= 3:
@@ -93,6 +94,8 @@ def pegar_membros(url):
 # =========================
 
 def pegar_pvp(nome):
+
+    global ORDEM_GLOBAL  # 🔥 contador global (cria ele = 0 no topo do código)
 
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
@@ -158,9 +161,16 @@ def pegar_pvp(nome):
                 ts = tempo_para_datetime(tempo)
 
                 if not ts:
+                    atual = []
                     continue
 
-                eventos.append((base.strip(), tempo.strip(), ts))
+                # =========================
+                # 🔥 ORDEM GLOBAL REAL (ESSENCIAL)
+                # =========================
+                ordem = ORDEM_GLOBAL
+                ORDEM_GLOBAL += 1
+
+                eventos.append((base.strip(), tempo.strip(), ts, ordem))
 
                 atual = []
 
@@ -327,8 +337,14 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 CORRETO: eventos tem 3 valores
-        for base, tempo, ts in eventos:
+        # 🔥 AQUI ESTÁ A CORREÇÃO PRINCIPAL
+        for i, evento in enumerate(eventos):
+
+            # compatível com qualquer formato
+            if len(evento) == 3:
+                base, tempo, ts = evento
+            else:
+                continue
 
             if not base or "killed" not in base:
                 continue
@@ -342,8 +358,12 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # 🔥 APPEND-ONLY (com timestamp real)
-            FEED.append((base, tempo, ts or 0, time.time()))
+            # 🔥 ORDEM REAL DO SITE (quanto menor i, mais recente)
+            ordem = i
+
+            # 🔥 evita duplicados reais
+            if not any(e[0] == base and e[1] == tempo for e in FEED):
+                FEED.append((base, tempo, ts or 0, ordem))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -424,7 +444,6 @@ def limpar_nome(nome):
 def montar_msg():
 
     agora_str = datetime.now(BRASIL).strftime("%H:%M")
-    agora_ts = time.time()
 
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
@@ -445,7 +464,6 @@ def montar_msg():
             continue
 
         killers, morto = normalizar_kill(base)
-
         if not killers or not morto:
             continue
 
@@ -462,31 +480,22 @@ def montar_msg():
         if not ((killer_virtue and morto_peace) or (killer_peace and morto_virtue)):
             continue
 
-        # 🔥 timestamp seguro
-        if isinstance(ts, datetime):
-            ts_valor = ts.timestamp()
-        elif isinstance(ts, (int, float)):
-            ts_valor = ts
-        else:
-            continue
-
         icon = "🟦" if killer_virtue else "🟥"
 
-        filtrados.append((icon, base, tempo, ts_valor, ordem))
+        filtrados.append((icon, base, tempo, ts, ordem))
 
-    # 🔥 filtro 2h
-    limite = agora_ts - (2 * 3600)
-    filtrados = [e for e in filtrados if e[3] >= limite]
+    # 🔥 ORDENAÇÃO IGUAL AO SITE
+    # 1. GRUPO POR TEMPO (string)
+    # 2. ORDEM ORIGINAL DO SITE
+    filtrados.sort(key=lambda x: (x[2], x[4]))
 
-    # 🔥 ORDEM CORRETA:
-    # ts DESC (recente)
-    # ordem ASC (igual site)
-    filtrados.sort(key=lambda x: (-x[3], x[4]))
+    # 🔥 INVERTE GRUPOS (mais recente primeiro)
+    filtrados.reverse()
 
     if not filtrados:
         msg += "_Nenhum PvP recente entre guilds._\n"
     else:
-        for icon, base, tempo, ts_valor, ordem in filtrados[:10]:
+        for icon, base, tempo, ts, ordem in filtrados[:10]:
 
             killers, morto = normalizar_kill(base)
 
