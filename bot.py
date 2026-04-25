@@ -95,26 +95,45 @@ def pegar_membros(url):
 
 def pegar_pvp(nome):
 
-    global ORDEM_GLOBAL  # 🔥 contador global (cria ele = 0 no topo do código)
+    global ORDEM_GLOBAL
 
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
         r = requests.get(url, timeout=10)
-        soup = BeautifulSoup(r.text, "html.parser")
 
-        texto = soup.get_text(" ")
-
-        if "Recent character kills and deaths" not in texto:
+        if r.status_code != 200:
             return []
 
-        parte = texto.split("Recent character kills and deaths")[1]
-        tokens = parte.split()
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # 🔥 pega todos os textos da página
+        linhas = [x.strip() for x in soup.stripped_strings]
 
         eventos = []
+        pegando = False
+        buffer = []
+
+        for linha in linhas:
+
+            # 🔥 inicia captura
+            if "Recent character kills and deaths" in linha:
+                pegando = True
+                continue
+
+            if not pegando:
+                continue
+
+            # 🔥 fim da seção (proteção)
+            if "Level" in linha or "Guild" in linha:
+                break
+
+            buffer.append(linha)
+
+        # 🔥 agora monta eventos corretamente
         atual = []
 
-        for palavra in tokens:
+        for palavra in buffer:
 
             atual.append(palavra)
 
@@ -126,51 +145,32 @@ def pegar_pvp(nome):
                     atual = []
                     continue
 
-                # =========================
-                # 🔥 SPLIT SEGURO
-                # =========================
+                # -------------------------
+                # SPLIT BASE / TEMPO
+                # -------------------------
                 if "-" in frase:
                     parts = frase.split("-", 1)
-
-                    if len(parts) < 2:
-                        atual = []
-                        continue
-
                     base = parts[0].strip()
                     tempo = parts[1].strip()
-
                 else:
                     base = frase
                     tempo = ""
 
-                # =========================
-                # 🔥 FILTRO DE LIXO REAL
-                # =========================
-                if (
-                    not base
-                    or not tempo
-                    or tempo.strip() == ""
-                    or tempo.strip() == "[]"
-                ):
+                if not base or not tempo:
                     atual = []
                     continue
 
-                # =========================
-                # 🔥 TIMESTAMP SAFE
-                # =========================
                 ts = tempo_para_datetime(tempo)
 
                 if not ts:
                     atual = []
                     continue
 
-                # =========================
-                # 🔥 ORDEM GLOBAL REAL (ESSENCIAL)
-                # =========================
+                # 🔥 ORDEM GLOBAL
                 ordem = ORDEM_GLOBAL
                 ORDEM_GLOBAL += 1
 
-                eventos.append((base.strip(), tempo.strip(), ts, ordem))
+                eventos.append((base, tempo, ts, ordem))
 
                 atual = []
 
