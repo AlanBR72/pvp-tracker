@@ -482,14 +482,21 @@ def resumo_diario(stats):
     mortes_peace = 0
 
     # 🔥 FILTRA PELO TEMPO REAL
-    for e in eventos:
+    for e in FEED:
+
         if len(e) == 4:
             base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            ordem = time.time()
+            ordem = 0
 
-        if added_at < limite:
+        # usa timestamp real
+        if isinstance(ts, datetime):
+            ts_check = ts.timestamp()
+        else:
+            ts_check = ts
+
+        if ts_check < limite:
             continue
 
         killers, morto = normalizar_kill(base)
