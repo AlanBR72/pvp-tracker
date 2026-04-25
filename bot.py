@@ -433,12 +433,11 @@ def montar_msg():
 
     for e in FEED:
 
-        # 🔥 compatibilidade total
         if len(e) == 4:
             base, tempo, ts, ordem = e
         elif len(e) == 3:
             base, tempo, ts = e
-            ordem = agora_ts
+            ordem = 0
         else:
             continue
 
@@ -460,7 +459,6 @@ def montar_msg():
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
 
-        # 🔥 só Virtue vs Peace
         if not ((killer_virtue and morto_peace) or (killer_peace and morto_virtue)):
             continue
 
@@ -476,12 +474,14 @@ def montar_msg():
 
         filtrados.append((icon, base, tempo, ts_valor, ordem))
 
-    # 🔥 FILTRO 2h
+    # 🔥 filtro 2h
     limite = agora_ts - (2 * 3600)
     filtrados = [e for e in filtrados if e[3] >= limite]
 
-    # 🔥 ORDEM PERFEITA (tempo + ordem do site)
-    filtrados.sort(key=lambda x: (x[3], x[4]), reverse=True)
+    # 🔥 ORDEM CORRETA:
+    # ts DESC (recente)
+    # ordem ASC (igual site)
+    filtrados.sort(key=lambda x: (-x[3], x[4]))
 
     if not filtrados:
         msg += "_Nenhum PvP recente entre guilds._\n"
