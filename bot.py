@@ -224,12 +224,23 @@ def montar_msg_virtue():
     agora = datetime.now(BRASIL).strftime("%H:%M")
     limite = agora - (2 * 3600)  # últimas 2 horas
 
-    filtrados = [
-        e for e in filtrados
-        if (
-            isinstance(e[3], datetime) and e[3].timestamp() >= limite
-        )
-    ]
+    filtrados_corrigidos = []
+
+    for e in filtrados:
+
+        ts = e[3]
+
+        if isinstance(ts, datetime):
+            ts_valor = ts.timestamp()
+        elif isinstance(ts, (int, float)):
+            ts_valor = ts
+        else:
+            continue  # ignora lixo
+
+        if ts_valor >= limite:
+            filtrados_corrigidos.append(e)
+
+    filtrados = filtrados_corrigidos
 
     # 🔥 ordena por chegada real
     filtrados.sort(key=lambda x: x[4], reverse=True)
@@ -443,12 +454,23 @@ def montar_msg():
     agora = datetime.now(BRASIL).strftime("%H:%M")
     limite = agora - (2 * 3600)  # últimas 2 horas
 
-    filtrados = [
-        e for e in filtrados
-        if (
-            isinstance(e[3], datetime) and e[3].timestamp() >= limite
-        )
-    ]
+        filtrados_corrigidos = []
+
+        for e in filtrados:
+
+            ts = e[3]
+
+            if isinstance(ts, datetime):
+                ts_valor = ts.timestamp()
+            elif isinstance(ts, (int, float)):
+                ts_valor = ts
+            else:
+                continue  # ignora lixo
+
+            if ts_valor >= limite:
+                filtrados_corrigidos.append(e)
+
+        filtrados = filtrados_corrigidos
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(key=lambda x: x[4], reverse=True)
