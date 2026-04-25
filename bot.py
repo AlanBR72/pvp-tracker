@@ -423,17 +423,24 @@ def limpar_nome(nome):
 
 def montar_msg():
 
+    agora_str = datetime.now(BRASIL).strftime("%H:%M")
+    agora_ts = time.time()
+
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # 🔥 garante estrutura correta
-    eventos = [e for e in FEED if len(e) >= 4]
-
     filtrados = []
 
-    for e in eventos:
+    for e in FEED:
 
-        base, tempo, ts, ordem = e
+        # 🔥 compatibilidade total
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        elif len(e) == 3:
+            base, tempo, ts = e
+            ordem = agora_ts
+        else:
+            continue
 
         if not base or "killed" not in base:
             continue
@@ -453,24 +460,11 @@ def montar_msg():
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
 
-        if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
+        # 🔥 somente guerras Virtue vs Peace
+        if not ((killer_virtue and morto_peace) or (killer_peace and morto_virtue)):
+            continue
 
-            icon = "🟦" if killer_virtue else "🟥"
-
-            filtrados.append((icon, base, tempo, ts, ordem))
-
-    # =========================
-    # 🔥 FILTRO DE TEMPO (últimas 2h)
-    # =========================
-    agora = datetime.now(BRASIL)
-    limite = agora.timestamp() - (2 * 3600)
-
-    filtrados_corrigidos = []
-
-    for e in filtrados:
-
-        ts = e[3]
-
+        # 🔥 timestamp seguro
         if isinstance(ts, datetime):
             ts_valor = ts.timestamp()
         elif isinstance(ts, (int, float)):
@@ -478,36 +472,29 @@ def montar_msg():
         else:
             continue
 
-        if ts_valor >= limite:
-            filtrados_corrigidos.append(e)
+        icon = "🟦" if killer_virtue else "🟥"
 
-    filtrados = filtrados_corrigidos
+        filtrados.append((icon, base, tempo, ts_valor))
 
-    # =========================
-    # 🔥 ORDENAÇÃO REAL (igual site)
-    # =========================
-    filtrados.sort(key=lambda x: x[4], reverse=True)
+    # 🔥 FILTRO TEMPO REAL (2 horas)
+    limite = agora_ts - (2 * 3600)
+    filtrados = [e for e in filtrados if e[3] >= limite]
 
-    # =========================
-    # 🔥 MONTA MSG
-    # =========================
+    # 🔥 ORDENA PELO TEMPO REAL
+    filtrados.sort(key=lambda x: x[3], reverse=True)
+
     if not filtrados:
-        msg += "_Nenhum PvP recente._\n"
-        return msg
+        msg += "_Nenhum PvP recente entre guilds._\n"
+    else:
+        for icon, base, tempo, ts_valor in filtrados[:10]:
 
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
+            killers, morto = normalizar_kill(base)
 
-        killers, morto = normalizar_kill(base)
+            killers_lista = killers.split(" & ")
+            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+            morto_fmt = f"**{morto.strip()}**"
 
-        if not killers or not morto:
-            continue
-
-        killers_lista = killers.split(" & ")
-
-        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-        morto_fmt = f"**{morto.strip()}**"
-
-        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
     return msg[:1900]
     
