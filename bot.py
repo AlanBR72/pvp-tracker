@@ -221,8 +221,8 @@ def montar_msg_virtue():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    agora = time.time()
-    limite = agora - (6 * 3600)  # últimas 6 horas
+    agora = datetime.now(BRASIL).strftime("%H:%M")
+    limite = agora - (2 * 3600)  # últimas 2 horas
 
     filtrados = [
         e for e in filtrados
@@ -440,8 +440,8 @@ def montar_msg():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    agora = time.time()
-    limite = agora - (6 * 3600)  # últimas 6 horas
+    agora = datetime.now(BRASIL).strftime("%H:%M")
+    limite = agora - (2 * 3600)  # últimas 2 horas
 
     filtrados = [
         e for e in filtrados
