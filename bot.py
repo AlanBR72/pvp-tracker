@@ -460,7 +460,7 @@ def montar_msg():
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
 
-        # 🔥 somente guerras Virtue vs Peace
+        # 🔥 só Virtue vs Peace
         if not ((killer_virtue and morto_peace) or (killer_peace and morto_virtue)):
             continue
 
@@ -474,19 +474,19 @@ def montar_msg():
 
         icon = "🟦" if killer_virtue else "🟥"
 
-        filtrados.append((icon, base, tempo, ts_valor))
+        filtrados.append((icon, base, tempo, ts_valor, ordem))
 
-    # 🔥 FILTRO TEMPO REAL (2 horas)
+    # 🔥 FILTRO 2h
     limite = agora_ts - (2 * 3600)
     filtrados = [e for e in filtrados if e[3] >= limite]
 
-    # 🔥 ORDENA PELO TEMPO REAL
-    filtrados.sort(key=lambda x: x[3], reverse=True)
+    # 🔥 ORDEM PERFEITA (tempo + ordem do site)
+    filtrados.sort(key=lambda x: (x[3], x[4]), reverse=True)
 
     if not filtrados:
         msg += "_Nenhum PvP recente entre guilds._\n"
     else:
-        for icon, base, tempo, ts_valor in filtrados[:10]:
+        for icon, base, tempo, ts_valor, ordem in filtrados[:10]:
 
             killers, morto = normalizar_kill(base)
 
