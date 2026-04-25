@@ -100,29 +100,32 @@ def pegar_pvp(nome):
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
-        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+
+        r = requests.get(url, headers=headers, timeout=10)
 
         if r.status_code != 200:
+            print("Erro HTTP:", r.status_code)
             return []
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        texto = soup.get_text(" ")
+        texto = " ".join(soup.stripped_strings)
 
-        if "Recent character kills and deaths" not in texto:
-            print("⚠️ Seção não encontrada")
+        if "killed" not in texto:
+            print("⚠️ Conteúdo não carregado (provável bloqueio)")
             return []
-
-        parte = texto.split("Recent character kills and deaths")[1]
 
         eventos = []
 
         matches = re.findall(
             r"(.+? killed .+?)\s*[-•]?\s*(\d+ .*? ago)",
-            parte
+            texto
         )
 
-        for i, (base, tempo) in enumerate(matches):
+        for base, tempo in matches:
 
             base = base.strip()
             tempo = tempo.strip()
@@ -132,7 +135,6 @@ def pegar_pvp(nome):
             if not ts:
                 continue
 
-            # 🔥 ORDEM REAL DO SITE
             ordem = ORDEM_GLOBAL
             ORDEM_GLOBAL += 1
 
