@@ -399,7 +399,7 @@ def analisar_pvp():
                     if k_norm in membros_p:
                         stats["peace"][k_norm] = stats["peace"].get(k_norm, 0) + 1
 
-        time.sleep(0.3)
+        time.sleep(random.uniform(1.2, 2.5))
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
