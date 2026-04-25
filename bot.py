@@ -95,50 +95,72 @@ def pegar_membros(url):
 
 def pegar_pvp(nome):
 
-    global ORDEM_GLOBAL
-
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive"
         }
 
         r = requests.get(url, headers=headers, timeout=10)
 
         if r.status_code != 200:
-            print("Erro HTTP:", r.status_code)
+            print("⚠️ Falha HTTP:", r.status_code)
             return []
 
-        soup = BeautifulSoup(r.text, "html.parser")
+        texto = r.text
 
-        texto = " ".join(soup.stripped_strings)
-
-        if "killed" not in texto:
+        if "Recent character kills and deaths" not in texto:
             print("⚠️ Conteúdo não carregado (provável bloqueio)")
             return []
 
+        soup = BeautifulSoup(texto, "html.parser")
+        texto = soup.get_text(" ")
+
+        parte = texto.split("Recent character kills and deaths")[1]
+        tokens = parte.split()
+
         eventos = []
+        atual = []
 
-        matches = re.findall(
-            r"(.+? killed .+?)\s*[-•]?\s*(\d+ .*? ago)",
-            texto
-        )
+        for palavra in tokens:
 
-        for base, tempo in matches:
+            atual.append(palavra)
 
-            base = base.strip()
-            tempo = tempo.strip()
+            if "ago" in palavra:
 
-            ts = tempo_para_datetime(tempo)
+                frase = " ".join(atual)
 
-            if not ts:
-                continue
+                if "killed" not in frase:
+                    atual = []
+                    continue
 
-            ordem = ORDEM_GLOBAL
-            ORDEM_GLOBAL += 1
+                # split seguro
+                if "-" in frase:
+                    base, tempo = frase.split("-", 1)
+                else:
+                    base = frase
+                    tempo = ""
 
-            eventos.append((base, tempo, ts, ordem))
+                base = base.strip()
+                tempo = tempo.strip()
+
+                if not base or not tempo:
+                    atual = []
+                    continue
+
+                ts = tempo_para_datetime(tempo)
+
+                if not ts:
+                    atual = []
+                    continue
+
+                eventos.append((base, tempo, ts))
+
+                atual = []
 
         return eventos
 
