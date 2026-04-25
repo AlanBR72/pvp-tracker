@@ -302,7 +302,7 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 AQUI É A CHAVE: INDEX DO SITE
+        # 🔥 ENUMERATE = ORDEM REAL DO SITE
         for i, (base, tempo, ts) in enumerate(eventos):
 
             if not base or "killed" not in base:
@@ -317,10 +317,8 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # =========================
-            # 🔥 ORDEM REAL DO SITE
-            # =========================
-            ordem = i  # quanto menor = mais recente no site
+            # 🔥 ORDEM REAL DO SITE (desempate perfeito)
+            ordem = i
 
             # 🔥 evita duplicados
             if not any(e[0] == base and e[1] == tempo for e in FEED):
@@ -407,17 +405,11 @@ def montar_msg():
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = [e for e in FEED if len(e) >= 3]
+    eventos = [e for e in FEED if len(e) >= 4]
 
     filtrados = []
 
-    for e in eventos:
-
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
-        else:
-            base, tempo, ts = e
-            ordem = 0
+    for base, tempo, ts, ordem in eventos:
 
         killers, morto = normalizar_kill(base)
 
@@ -440,30 +432,29 @@ def montar_msg():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    # 🔥 ORDENAÇÃO PERFEITA (tempo + ordem do site)
+    # =========================
+    # 🔥 SORT PERFEITO (SITE)
+    # =========================
     filtrados.sort(
         key=lambda x: (
             -(x[3].timestamp() if isinstance(x[3], datetime) else x[3]),
-            x[4]  # 🔥 desempate = ordem do site
+            x[4]  # 🔥 ordem do scraping (MENOR primeiro)
         )
     )
 
     if not filtrados:
         msg += "_Nenhum PvP recente entre guilds._\n"
-    else:
-        for icon, base, tempo, ts, ordem in filtrados[:10]:
+        return msg
 
-            killers, morto = normalizar_kill(base)
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-            if not killers or not morto:
-                continue
+        killers, morto = normalizar_kill(base)
 
-            killers_lista = killers.split(" & ")
+        killers_lista = killers.split(" & ")
+        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+        morto_fmt = f"**{morto.strip()}**"
 
-            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-            morto_fmt = f"**{morto.strip()}**"
-
-            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
     return msg[:1900]
     
