@@ -8,6 +8,7 @@ import os
 import re
 from datetime import datetime, timedelta
 import unicodedata
+import random
 
 # =========================
 # CONFIG
@@ -340,10 +341,9 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 AQUI ESTÁ A CORREÇÃO PRINCIPAL
+        # 🔥 ORDEM REAL DO SITE (index)
         for i, evento in enumerate(eventos):
 
-            # compatível com qualquer formato
             if len(evento) == 3:
                 base, tempo, ts = evento
             else:
@@ -361,8 +361,7 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # 🔥 ORDEM REAL DO SITE (quanto menor i, mais recente)
-            ordem = i
+            ordem = i  # 🔥 ESSENCIAL pra manter ordem igual ao site
 
             # 🔥 evita duplicados reais
             if not any(e[0] == base and e[1] == tempo for e in FEED):
@@ -399,6 +398,7 @@ def analisar_pvp():
                     if k_norm in membros_p:
                         stats["peace"][k_norm] = stats["peace"].get(k_norm, 0) + 1
 
+        # 🔥 delay anti-bloqueio (AGORA FUNCIONA)
         time.sleep(random.uniform(1.2, 2.5))
 
     salvar(ARQ_LOG, log)
