@@ -182,7 +182,7 @@ def ultimos_pvp_virtue():
 
 def montar_msg_virtue():
 
-    agora = datetime.now(BRASIL).strftime("%H:%M")
+    agora_str = datetime.now(BRASIL).strftime("%H:%M")
 
     msg = "⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
 
@@ -190,14 +190,11 @@ def montar_msg_virtue():
 
     for e in FEED:
 
-        # 🔥 compatibilidade total
+        # 🔥 garante estrutura correta
         if len(e) == 4:
             base, tempo, ts, ordem = e
-        elif len(e) == 3:
-            base, tempo, ts = e
-            ordem = time.time()
         else:
-            continue  # ignora lixo
+            continue
 
         if not base or "killed" not in base:
             continue
@@ -221,30 +218,30 @@ def montar_msg_virtue():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    agora = datetime.now(BRASIL).strftime("%H:%M")
-    limite = agora - (2 * 3600)  # últimas 2 horas
+    # =========================
+    # 🔥 FILTRO DE TEMPO (2 HORAS) — USANDO ORDEM REAL
+    # =========================
+    limite = time.time() - (2 * 3600)
 
     filtrados_corrigidos = []
 
     for e in filtrados:
 
-        ts = e[3]
+        ordem = e[4]
 
-        if isinstance(ts, datetime):
-            ts_valor = ts.timestamp()
-        elif isinstance(ts, (int, float)):
-            ts_valor = ts
-        else:
-            continue  # ignora lixo
-
-        if ts_valor >= limite:
+        if isinstance(ordem, (int, float)) and ordem >= limite:
             filtrados_corrigidos.append(e)
 
     filtrados = filtrados_corrigidos
 
-    # 🔥 ordena por chegada real
+    # =========================
+    # 🔥 ORDENAÇÃO REAL (igual site)
+    # =========================
     filtrados.sort(key=lambda x: x[4], reverse=True)
-    
+
+    # =========================
+    # 🔥 OUTPUT
+    # =========================
     if not filtrados:
         msg += "_Nenhum PvP encontrado._\n"
     else:
@@ -252,13 +249,16 @@ def montar_msg_virtue():
 
             killers, morto = normalizar_kill(base)
 
+            if not killers or not morto:
+                continue
+
             killers_lista = killers.split(" & ")
             killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
             morto_fmt = f"**{morto.strip()}**"
 
             msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
-    msg += f"\n**⏱️ Atualizado:** _{agora}_"
+    msg += f"\n**⏱️ Atualizado:** _{agora_str}_"
 
     return msg[:1900]
 
