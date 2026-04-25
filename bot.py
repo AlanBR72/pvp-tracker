@@ -190,11 +190,11 @@ def montar_msg_virtue():
 
     for e in FEED:
 
-        # 🔥 garante estrutura correta
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
-        else:
+        # 🔥 só aceita estrutura correta
+        if len(e) != 4:
             continue
+
+        base, tempo, ts, ordem = e
 
         if not base or "killed" not in base:
             continue
@@ -219,31 +219,40 @@ def montar_msg_virtue():
             filtrados.append((icon, base, tempo, ts, ordem))
 
     # =========================
-    # 🔥 FILTRO DE TEMPO (2 HORAS) — USANDO ORDEM REAL
+    # 🔥 FILTRO REAL (últimas 2h)
     # =========================
-    limite = time.time() - (2 * 3600)
+    limite = datetime.now() - timedelta(hours=2)
 
     filtrados_corrigidos = []
 
     for e in filtrados:
 
-        ordem = e[4]
+        ts = e[3]
 
-        if isinstance(ordem, (int, float)) and ordem >= limite:
+        if isinstance(ts, datetime):
+            ts_dt = ts
+
+        elif isinstance(ts, (int, float)):
+            ts_dt = datetime.fromtimestamp(ts)
+
+        else:
+            continue
+
+        if ts_dt >= limite:
             filtrados_corrigidos.append(e)
 
     filtrados = filtrados_corrigidos
 
     # =========================
-    # 🔥 ORDENAÇÃO REAL (igual site)
+    # 🔥 ORDENAÇÃO (mais recente primeiro)
     # =========================
-    filtrados.sort(key=lambda x: x[4], reverse=True)
+    filtrados.sort(key=lambda x: x[3] if isinstance(x[3], datetime) else datetime.fromtimestamp(x[3]), reverse=True)
 
     # =========================
     # 🔥 OUTPUT
     # =========================
     if not filtrados:
-        msg += "_Nenhum PvP encontrado._\n"
+        msg += "_Nenhum PvP recente._\n"
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
