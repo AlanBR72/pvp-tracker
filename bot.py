@@ -429,16 +429,13 @@ def montar_msg():
         if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
 
             icon = "🟦" if killer_virtue else "🟥"
-
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    # =========================
-    # 🔥 SORT PERFEITO (SITE)
-    # =========================
+    # 🔥 SORT IGUAL AO SITE
     filtrados.sort(
         key=lambda x: (
             -(x[3].timestamp() if isinstance(x[3], datetime) else x[3]),
-            x[4]  # 🔥 ordem do scraping (MENOR primeiro)
+            x[4]  # 🔥 desempate = ordem real do site
         )
     )
 
