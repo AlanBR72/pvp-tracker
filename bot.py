@@ -8,7 +8,6 @@ import os
 import re
 from datetime import datetime, timedelta
 import unicodedata
-import random
 
 # =========================
 # CONFIG
@@ -34,7 +33,6 @@ MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
 ULTIMOS_PVP_VIRTUE = []
 FEED = []
-ORDEM_GLOBAL = 0
 
 def get_ts(e):
     if len(e) >= 3:
@@ -99,86 +97,74 @@ def pegar_pvp(nome):
     url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
 
     try:
-        # 🔥 sessão persistente (MUITO importante)
-        if not hasattr(pegar_pvp, "session"):
-            pegar_pvp.session = requests.Session()
-            pegar_pvp.session.headers.update({
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                              "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Connection": "keep-alive"
-            })
+        r = requests.get(url, timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
 
-        session = pegar_pvp.session
+        texto = soup.get_text(" ")
 
-        # 🔁 retry automático
-        for tentativa in range(3):
+        if "Recent character kills and deaths" not in texto:
+            return []
 
-            r = session.get(url, timeout=10)
+        parte = texto.split("Recent character kills and deaths")[1]
+        tokens = parte.split()
 
-            if r.status_code != 200:
-                print(f"⚠️ HTTP {r.status_code} (tentativa {tentativa+1})")
-                time.sleep(1 + tentativa)
-                continue
+        eventos = []
+        atual = []
 
-            texto = r.text
+        for palavra in tokens:
 
-            if "Recent character kills and deaths" not in texto:
-                print("⚠️ Conteúdo não carregado (bloqueio leve)")
+            atual.append(palavra)
 
-                # 🔥 espera progressiva
-                time.sleep(1.5 + tentativa)
-                continue
+            if "ago" in palavra:
 
-            # ✔️ sucesso real
-            soup = BeautifulSoup(texto, "html.parser")
-            texto = soup.get_text(" ")
+                frase = " ".join(atual)
 
-            parte = texto.split("Recent character kills and deaths")[1]
-            tokens = parte.split()
-
-            eventos = []
-            atual = []
-
-            for palavra in tokens:
-
-                atual.append(palavra)
-
-                if "ago" in palavra:
-
-                    frase = " ".join(atual)
-
-                    if "killed" not in frase:
-                        atual = []
-                        continue
-
-                    if "-" in frase:
-                        base, tempo = frase.split("-", 1)
-                    else:
-                        base = frase
-                        tempo = ""
-
-                    base = base.strip()
-                    tempo = tempo.strip()
-
-                    if not base or not tempo:
-                        atual = []
-                        continue
-
-                    ts = tempo_para_datetime(tempo)
-
-                    if not ts:
-                        atual = []
-                        continue
-
-                    eventos.append((base, tempo, ts))
-
+                if "killed" not in frase:
                     atual = []
+                    continue
 
-            return eventos
+                # =========================
+                # 🔥 SPLIT SEGURO
+                # =========================
+                if "-" in frase:
+                    parts = frase.split("-", 1)
 
-        # ❌ falhou todas tentativas
-        return []
+                    if len(parts) < 2:
+                        atual = []
+                        continue
+
+                    base = parts[0].strip()
+                    tempo = parts[1].strip()
+
+                else:
+                    base = frase
+                    tempo = ""
+
+                # =========================
+                # 🔥 FILTRO DE LIXO REAL
+                # =========================
+                if (
+                    not base
+                    or not tempo
+                    or tempo.strip() == ""
+                    or tempo.strip() == "[]"
+                ):
+                    atual = []
+                    continue
+
+                # =========================
+                # 🔥 TIMESTAMP SAFE
+                # =========================
+                ts = tempo_para_datetime(tempo)
+
+                if not ts:
+                    continue
+
+                eventos.append((base.strip(), tempo.strip(), ts))
+
+                atual = []
+
+        return eventos
 
     except Exception as e:
         print("Erro pegar PvP:", e)
@@ -196,7 +182,7 @@ def ultimos_pvp_virtue():
 
 def montar_msg_virtue():
 
-    agora_str = datetime.now(BRASIL).strftime("%H:%M")
+    agora = datetime.now(BRASIL).strftime("%H:%M")
 
     msg = "⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
 
@@ -204,11 +190,14 @@ def montar_msg_virtue():
 
     for e in FEED:
 
-        # 🔥 só aceita estrutura correta
-        if len(e) != 4:
-            continue
-
-        base, tempo, ts, ordem = e
+        # 🔥 compatibilidade total
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        elif len(e) == 3:
+            base, tempo, ts = e
+            ordem = time.time()
+        else:
+            continue  # ignora lixo
 
         if not base or "killed" not in base:
             continue
@@ -232,48 +221,21 @@ def montar_msg_virtue():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    # =========================
-    # 🔥 FILTRO REAL (últimas 2h)
-    # =========================
-    limite = datetime.now() - timedelta(hours=2)
-
-    filtrados_corrigidos = []
-
-    for e in filtrados:
-
-        ts = e[3]
-
-        if isinstance(ts, datetime):
-            ts_dt = ts
-
-        elif isinstance(ts, (int, float)):
-            ts_dt = datetime.fromtimestamp(ts)
-
-        else:
-            continue
-
-        if ts_dt >= limite:
-            filtrados_corrigidos.append(e)
-
-    filtrados = filtrados_corrigidos
-
-    # =========================
-    # 🔥 ORDENAÇÃO (mais recente primeiro)
-    # =========================
-    filtrados.sort(key=lambda x: (-x[3].timestamp(), x[4]))
-
-    # =========================
-    # 🔥 OUTPUT
-    # =========================
+    # 🔥 ordena por chegada real
+    filtrados.sort(
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime)
+            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
+            else x[4]
+        ),
+        reverse=True
+    )
     if not filtrados:
-        msg += "_Nenhum PvP recente._\n"
+        msg += "_Nenhum PvP encontrado._\n"
     else:
         for icon, base, tempo, ts, ordem in filtrados[:10]:
 
             killers, morto = normalizar_kill(base)
-
-            if not killers or not morto:
-                continue
 
             killers_lista = killers.split(" & ")
             killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
@@ -281,7 +243,7 @@ def montar_msg_virtue():
 
             msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
-    msg += f"\n**⏱️ Atualizado:** _{agora_str}_"
+    msg += f"\n**⏱️ Atualizado:** _{agora}_"
 
     return msg[:1900]
 
@@ -337,41 +299,12 @@ def analisar_pvp():
 
     novas_kills = []
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-
     for nome in membros_v:
 
-        eventos = []
+        eventos = pegar_pvp(nome)
 
-        # 🔥 TENTA ATÉ 3 VEZES POR PLAYER
-        for tentativa in range(3):
-
-            try:
-                eventos = pegar_pvp(nome)
-
-                if eventos:
-                    break  # sucesso
-
-                print(f"⚠️ Tentativa {tentativa+1} vazia para {nome}")
-
-            except Exception as e:
-                print(f"⚠️ Erro em {nome}: {e}")
-
-            time.sleep(random.uniform(1.5, 3.0))
-
-        if not eventos:
-            print(f"❌ Falha total ao pegar PvP de {nome}")
-            continue
-
-        # 🔥 PROCESSA EVENTOS
-        for i, evento in enumerate(eventos):
-
-            if len(evento) != 3:
-                continue
-
-            base, tempo, ts = evento
+        # 🔥 CORRETO: eventos tem 3 valores
+        for base, tempo, ts in eventos:
 
             if not base or "killed" not in base:
                 continue
@@ -385,12 +318,8 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # 🔥 ORDEM REAL DO SITE
-            ordem = i
-
-            # 🔥 evita duplicado real
-            if not any(e[0] == base and e[1] == tempo for e in FEED):
-                FEED.append((base, tempo, ts or 0, ordem))
+            # 🔥 APPEND-ONLY (com timestamp real)
+            FEED.append((base, tempo, ts or 0, time.time()))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -423,8 +352,7 @@ def analisar_pvp():
                     if k_norm in membros_p:
                         stats["peace"][k_norm] = stats["peace"].get(k_norm, 0) + 1
 
-        # 🔥 delay humano entre players
-        time.sleep(random.uniform(1.2, 2.2))
+        time.sleep(0.3)
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
@@ -471,27 +399,24 @@ def limpar_nome(nome):
 
 def montar_msg():
 
-    agora_str = datetime.now(BRASIL).strftime("%H:%M")
-
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
+    eventos = [e for e in FEED if len(e) >= 3]
+
     filtrados = []
 
-    for e in FEED:
+    for e in eventos:
 
+        # 🔥 compatível com 3 ou 4 valores
         if len(e) == 4:
             base, tempo, ts, ordem = e
-        elif len(e) == 3:
-            base, tempo, ts = e
-            ordem = 0
         else:
-            continue
-
-        if not base or "killed" not in base:
-            continue
+            base, tempo, ts = e
+            ordem = time.time()
 
         killers, morto = normalizar_kill(base)
+
         if not killers or not morto:
             continue
 
@@ -505,33 +430,35 @@ def montar_msg():
         morto_virtue = morto_norm in MEMBROS_VIRTUE
         morto_peace = morto_norm in MEMBROS_PEACE
 
-        if not ((killer_virtue and morto_peace) or (killer_peace and morto_virtue)):
+        if (killer_virtue and morto_peace) or (killer_peace and morto_virtue):
+
+            icon = "🟦" if killer_virtue else "🟥"
+
+            filtrados.append((icon, base, tempo, ts, ordem))
+
+    # 🔥 ordena por ordem real (melhor que tempo texto)
+    filtrados.sort(
+        key=lambda x: (
+            x[3].timestamp() if isinstance(x[3], datetime)
+            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
+            else x[4]
+        ),
+        reverse=True
+    )
+
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
             continue
 
-        icon = "🟦" if killer_virtue else "🟥"
+        killers_lista = killers.split(" & ")
 
-        filtrados.append((icon, base, tempo, ts, ordem))
+        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+        morto_fmt = f"**{morto.strip()}**"
 
-    # 🔥 ORDENAÇÃO IGUAL AO SITE
-    # 1. GRUPO POR TEMPO (string)
-    # 2. ORDEM ORIGINAL DO SITE
-    filtrados.sort(key=lambda x: (-x[3].timestamp(), x[4]))
-
-    # 🔥 INVERTE GRUPOS (mais recente primeiro)
-    filtrados.reverse()
-
-    if not filtrados:
-        msg += "_Nenhum PvP recente entre guilds._\n"
-    else:
-        for icon, base, tempo, ts, ordem in filtrados[:10]:
-
-            killers, morto = normalizar_kill(base)
-
-            killers_lista = killers.split(" & ")
-            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-            morto_fmt = f"**{morto.strip()}**"
-
-            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
     return msg[:1900]
     
@@ -557,21 +484,14 @@ def resumo_diario(stats):
     mortes_peace = 0
 
     # 🔥 FILTRA PELO TEMPO REAL
-    for e in FEED:
-
+    for e in eventos:
         if len(e) == 4:
             base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            ordem = 0
+            ordem = time.time()
 
-        # usa timestamp real
-        if isinstance(ts, datetime):
-            ts_check = ts.timestamp()
-        else:
-            ts_check = ts
-
-        if ts_check < limite:
+        if added_at < limite:
             continue
 
         killers, morto = normalizar_kill(base)
@@ -673,6 +593,57 @@ def segundos_ate_3h():
         alvo += timedelta(days=1)
 
     return (alvo - agora).total_seconds()
+
+def montar_bloco_virtue_pvp():
+
+    msg = "⚔️ **Últimos PvPs — Virtue** ⚔️\n\n"
+
+    eventos = [e for e in FEED if len(e) >= 3]
+
+    filtrados = []
+
+    for e in eventos:
+
+        # 🔥 compatível com tudo (antigo + novo)
+        if len(e) == 4:
+            base, tempo, ts, ordem = e
+        else:
+            base, tempo, ts = e
+            ordem = time.time()
+
+        killers, morto = normalizar_kill(base)
+
+        if not killers or not morto:
+            continue
+
+        killers_lista = killers.split(" & ")
+        killers_norm = [limpar_nome(k) for k in killers_lista]
+        morto_norm = limpar_nome(morto)
+
+        killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+        morto_virtue = morto_norm in MEMBROS_VIRTUE
+
+        # 🔥 Virtue vs QUALQUER UM
+        if killer_virtue or morto_virtue:
+
+            icon = "🟦" if killer_virtue else "🟥"
+
+            filtrados.append((icon, base, tempo, ts, ordem))
+
+    # 🔥 ordena pela ordem real
+    filtrados.sort(
+        key=lambda x: x[4],
+        reverse=True
+    )
+
+    if not filtrados:
+        msg += "_Nenhum PvP encontrado._\n"
+        return msg
+
+    for icon, base, tempo, ts, ordem in filtrados[:10]:
+        msg += f"{icon} {base} - _[{tempo}]_\n"
+
+    return msg
 
 def tempo_para_segundos(tempo):
 
