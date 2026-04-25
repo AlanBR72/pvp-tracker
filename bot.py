@@ -337,17 +337,41 @@ def analisar_pvp():
 
     novas_kills = []
 
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
     for nome in membros_v:
 
-        eventos = pegar_pvp(nome)
+        eventos = []
 
-        # 🔥 ORDEM REAL DO SITE (index)
+        # 🔥 TENTA ATÉ 3 VEZES POR PLAYER
+        for tentativa in range(3):
+
+            try:
+                eventos = pegar_pvp(nome)
+
+                if eventos:
+                    break  # sucesso
+
+                print(f"⚠️ Tentativa {tentativa+1} vazia para {nome}")
+
+            except Exception as e:
+                print(f"⚠️ Erro em {nome}: {e}")
+
+            time.sleep(random.uniform(1.5, 3.0))
+
+        if not eventos:
+            print(f"❌ Falha total ao pegar PvP de {nome}")
+            continue
+
+        # 🔥 PROCESSA EVENTOS
         for i, evento in enumerate(eventos):
 
-            if len(evento) == 3:
-                base, tempo, ts = evento
-            else:
+            if len(evento) != 3:
                 continue
+
+            base, tempo, ts = evento
 
             if not base or "killed" not in base:
                 continue
@@ -361,9 +385,10 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            ordem = i  # 🔥 ESSENCIAL pra manter ordem igual ao site
+            # 🔥 ORDEM REAL DO SITE
+            ordem = i
 
-            # 🔥 evita duplicados reais
+            # 🔥 evita duplicado real
             if not any(e[0] == base and e[1] == tempo for e in FEED):
                 FEED.append((base, tempo, ts or 0, ordem))
 
@@ -398,8 +423,8 @@ def analisar_pvp():
                     if k_norm in membros_p:
                         stats["peace"][k_norm] = stats["peace"].get(k_norm, 0) + 1
 
-        # 🔥 delay anti-bloqueio (AGORA FUNCIONA)
-        time.sleep(random.uniform(1.2, 2.5))
+        # 🔥 delay humano entre players
+        time.sleep(random.uniform(1.2, 2.2))
 
     salvar(ARQ_LOG, log)
     salvar(ARQ_STATS, stats)
