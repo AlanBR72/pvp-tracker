@@ -221,6 +221,16 @@ def montar_msg_virtue():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
+    agora = time.time()
+    limite = agora - (6 * 3600)  # últimas 6 horas
+
+    filtrados = [
+        e for e in filtrados
+        if (
+            isinstance(e[3], datetime) and e[3].timestamp() >= limite
+        )
+    ]
+
     # 🔥 ordena por chegada real
     filtrados.sort(key=lambda x: x[4], reverse=True)
     
@@ -429,6 +439,16 @@ def montar_msg():
             icon = "🟦" if killer_virtue else "🟥"
 
             filtrados.append((icon, base, tempo, ts, ordem))
+
+    agora = time.time()
+    limite = agora - (6 * 3600)  # últimas 6 horas
+
+    filtrados = [
+        e for e in filtrados
+        if (
+            isinstance(e[3], datetime) and e[3].timestamp() >= limite
+        )
+    ]
 
     # 🔥 ordena por ordem real (melhor que tempo texto)
     filtrados.sort(key=lambda x: x[4], reverse=True)
