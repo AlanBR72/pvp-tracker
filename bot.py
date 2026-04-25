@@ -417,18 +417,17 @@ def montar_msg():
     msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    eventos = [e for e in FEED if len(e) >= 3]
+    # 🔥 garante estrutura correta
+    eventos = [e for e in FEED if len(e) >= 4]
 
     filtrados = []
 
     for e in eventos:
 
-        # 🔥 compatível com 3 ou 4 valores
-        if len(e) == 4:
-            base, tempo, ts, ordem = e
-        else:
-            base, tempo, ts = e
-            ordem = time.time()
+        base, tempo, ts, ordem = e
+
+        if not base or "killed" not in base:
+            continue
 
         killers, morto = normalizar_kill(base)
 
@@ -451,29 +450,41 @@ def montar_msg():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    agora = datetime.now(BRASIL).strftime("%H:%M")
-    limite = agora - (2 * 3600)  # últimas 2 horas
+    # =========================
+    # 🔥 FILTRO DE TEMPO (últimas 2h)
+    # =========================
+    agora = datetime.now(BRASIL)
+    limite = agora.timestamp() - (2 * 3600)
 
-        filtrados_corrigidos = []
+    filtrados_corrigidos = []
 
-        for e in filtrados:
+    for e in filtrados:
 
-            ts = e[3]
+        ts = e[3]
 
-            if isinstance(ts, datetime):
-                ts_valor = ts.timestamp()
-            elif isinstance(ts, (int, float)):
-                ts_valor = ts
-            else:
-                continue  # ignora lixo
+        if isinstance(ts, datetime):
+            ts_valor = ts.timestamp()
+        elif isinstance(ts, (int, float)):
+            ts_valor = ts
+        else:
+            continue
 
-            if ts_valor >= limite:
-                filtrados_corrigidos.append(e)
+        if ts_valor >= limite:
+            filtrados_corrigidos.append(e)
 
-        filtrados = filtrados_corrigidos
+    filtrados = filtrados_corrigidos
 
-    # 🔥 ordena por ordem real (melhor que tempo texto)
+    # =========================
+    # 🔥 ORDENAÇÃO REAL (igual site)
+    # =========================
     filtrados.sort(key=lambda x: x[4], reverse=True)
+
+    # =========================
+    # 🔥 MONTA MSG
+    # =========================
+    if not filtrados:
+        msg += "_Nenhum PvP recente._\n"
+        return msg
 
     for icon, base, tempo, ts, ordem in filtrados[:10]:
 
