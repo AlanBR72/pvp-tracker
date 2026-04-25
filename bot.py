@@ -303,8 +303,8 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 CORRETO: eventos tem 3 valores
-        for base, tempo, ts in eventos:
+        # 🔥 ORDEM REAL DO SITE
+        for i, (base, tempo, ts) in enumerate(eventos):
 
             if not base or "killed" not in base:
                 continue
@@ -318,8 +318,12 @@ def analisar_pvp():
             killers_norm = [limpar_nome(k).strip() for k in killers_lista]
             morto_norm = limpar_nome(morto).strip()
 
-            # 🔥 APPEND-ONLY (com timestamp real)
-            FEED.append((base, tempo, ts or 0, time.time()))
+            # 🔥 ordem baseada no site (desempate perfeito)
+            ordem = -i
+
+            # 🔥 evita duplicado real
+            if not any(e[0] == base and e[1] == tempo for e in FEED):
+                FEED.append((base, tempo, ts or 0, ordem))
 
             if len(FEED) > 500:
                 FEED.pop(0)
@@ -408,12 +412,11 @@ def montar_msg():
 
     for e in eventos:
 
-        # 🔥 compatível com 3 ou 4 valores
         if len(e) == 4:
             base, tempo, ts, ordem = e
         else:
             base, tempo, ts = e
-            ordem = time.time()
+            ordem = 0
 
         killers, morto = normalizar_kill(base)
 
@@ -436,29 +439,32 @@ def montar_msg():
 
             filtrados.append((icon, base, tempo, ts, ordem))
 
-    # 🔥 ordena por ordem real (melhor que tempo texto)
+    # 🔥 ORDENAÇÃO PERFEITA (tempo + ordem do site)
     filtrados.sort(
         key=lambda x: (
             x[3].timestamp() if isinstance(x[3], datetime)
-            else x[3] if isinstance(x[3], (int, float)) and x[3] > 0
-            else x[4]
+            else x[3] if isinstance(x[3], (int, float)) else 0,
+            x[4]
         ),
         reverse=True
     )
 
-    for icon, base, tempo, ts, ordem in filtrados[:10]:
+    if not filtrados:
+        msg += "_Nenhum PvP recente entre guilds._\n"
+    else:
+        for icon, base, tempo, ts, ordem in filtrados[:10]:
 
-        killers, morto = normalizar_kill(base)
+            killers, morto = normalizar_kill(base)
 
-        if not killers or not morto:
-            continue
+            if not killers or not morto:
+                continue
 
-        killers_lista = killers.split(" & ")
+            killers_lista = killers.split(" & ")
 
-        killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
-        morto_fmt = f"**{morto.strip()}**"
+            killers_fmt = " and ".join([f"**{k.strip()}**" for k in killers_lista])
+            morto_fmt = f"**{morto.strip()}**"
 
-        msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
+            msg += f"{icon} {killers_fmt} killed {morto_fmt} - _[{tempo}]_\n"
 
     return msg[:1900]
     
