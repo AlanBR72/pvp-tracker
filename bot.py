@@ -272,7 +272,12 @@ def analisar_pvp():
         eventos = pegar_pvp(nome)
 
         # 🔥 ordem real do site
-        for i, (base, tempo, ts) in enumerate(eventos):
+        for i, evento in enumerate(eventos):
+
+            if len(evento) < 3:
+                continue
+
+            base, tempo, ts = evento[:3]
 
             if not base or "killed" not in base:
                 continue
