@@ -262,15 +262,16 @@ def analisar_pvp():
 
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
-    print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}")
-    print(f"🟥 Peace membros: {len(MEMBROS_PEACE)}\n")
-
     banco = carregar(ARQ_PVP_DB)
+
+    if not isinstance(banco, list):
+        banco = []
 
     for nome in MEMBROS_VIRTUE:
 
         eventos = pegar_pvp(nome)
 
+        # 🔥 ordem real do site
         for i, (base, tempo, ts) in enumerate(eventos):
 
             if not base or "killed" not in base:
@@ -281,14 +282,37 @@ def analisar_pvp():
             if not killers or not morto:
                 continue
 
-            killers_lista = re.split(r" & | , ", killers)
+            killers_lista = killers.split(" & ")
 
             killers_norm = [
-                limpar_nome(k).strip()
+                limpar_nome(k)
                 for k in killers_lista
             ]
 
-            morto_norm = limpar_nome(morto).strip()
+            morto_norm = limpar_nome(morto)
+
+            # =====================================
+            # FEED RANDOM
+            # =====================================
+
+            if not any(
+                e[0] == base and e[1] == tempo
+                for e in FEED
+            ):
+
+                FEED.append((
+                    base,
+                    tempo,
+                    int(ts.timestamp()),
+                    i
+                ))
+
+            # limita feed
+            FEED = FEED[-500:]
+
+            # =====================================
+            # FILTRO VIRTUE VS PEACE
+            # =====================================
 
             killer_virtue = any(
                 k in MEMBROS_VIRTUE
@@ -303,76 +327,53 @@ def analisar_pvp():
             morto_virtue = morto_norm in MEMBROS_VIRTUE
             morto_peace = morto_norm in MEMBROS_PEACE
 
-            # =========================
-            # RANDOM PVP (FEED)
-            # =========================
-
-            if killer_virtue or morto_virtue:
-
-                icon = "🟦" if killer_virtue else "🟥"
-
-                ordem = i
-
-                if not any(
-                    e[1] == base and e[2] == tempo
-                    for e in FEED
-                ):
-
-                    FEED.append((
-                        icon,
-                        base,
-                        tempo,
-                        ts,
-                        ordem
-                    ))
-
-                if len(FEED) > 500:
-                    FEED.pop(0)
-
-            # =========================
-            # VIRTUE vs PEACE
-            # =========================
-
-            war_pvp = (
+            is_war = (
                 (killer_virtue and morto_peace)
                 or
                 (killer_peace and morto_virtue)
             )
 
-            if war_pvp:
+            if not is_war:
+                continue
 
-                icon = "🟦" if killer_virtue else "🟥"
+            icon = "🟦" if killer_virtue else "🟥"
 
-                registro = {
-                    "icon": icon,
-                    "base": base,
-                    "tempo": tempo,
-                    "timestamp": ts.timestamp(),
-                    "horario": datetime.now(BRASIL).strftime("%d/%m/%Y %H:%M:%S")
-                }
+            # evita duplicado
+            ja_existe = any(
+                p["base"] == base
+                and p["tempo"] == tempo
+                for p in banco
+            )
 
-                existe = any(
-                    x["base"] == base
-                    and x["tempo"] == tempo
-                    for x in banco
-                )
+            if ja_existe:
+                continue
 
-                if not existe:
+            print(f"{icon} {base} [{tempo}]")
 
-                    banco.append(registro)
+            banco.append({
+                "icon": icon,
+                "base": base,
+                "tempo": tempo,
+                "timestamp": int(ts.timestamp()),
+                "ordem": i
+            })
 
-                    print(f"{icon} {base} [{tempo}]")
+    # mantém últimos 300
+    banco.sort(
+        key=lambda x: (
+            -x["timestamp"],
+            x["ordem"]
+        )
+    )
 
-        time.sleep(0.3)
+    banco = banco[:300]
 
     salvar(ARQ_PVP_DB, banco)
 
-# =========================
-# MONTAR MSG
-# =========================
+    print(f"\n🧠 PvPs guild salvos: {len(banco)}")
 
 # =========================
-# PAINEL WAR
+# MONTAR MSG
 # =========================
 
 def montar_msg_war():
