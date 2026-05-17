@@ -10,7 +10,7 @@ import unicodedata
 # CONFIG
 # =========================
 
-WEBHOOK = "SEU_WEBHOOK"
+WEBHOOK = "https://discord.com/api/webhooks/1496156584630419608/pgGWnevw4PvV_VryvMVoXTaML_Xep51evEdzFXg8inMYbX-ogI7hhs1BhcvYmekCG9l0"
 
 URL_VIRTUE = "https://www.rucoyonline.com/guild/Guilt%20Of%20Virtue"
 
