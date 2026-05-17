@@ -14,6 +14,8 @@ WEBHOOK = "https://discord.com/api/webhooks/1496156584630419608/pgGWnevw4PvV_Vry
 
 URL_VIRTUE = "https://www.rucoyonline.com/guild/Guilt%20Of%20Virtue"
 
+URL_PEACE = "https://www.rucoyonline.com/guild/Peace%20Killers"
+
 BRASIL = pytz.timezone("America/Sao_Paulo")
 
 INTERVALO = 300  # 5 minutos
@@ -23,11 +25,31 @@ INTERVALO = 300  # 5 minutos
 # =========================
 
 MEMBROS_VIRTUE = []
+MEMBROS_PEACE = []
+ARQ_PVP_DB = "pvp_db.json"
 FEED = []
 
 # =========================
 # DISCORD
 # =========================
+
+def carregar(file):
+
+    if not os.path.exists(file):
+        return []
+
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    except:
+        return []
+
+def salvar(file, data):
+
+    with open(file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
 
 def enviar_e_pegar_id(msg):
     r = requests.post(WEBHOOK + "?wait=true", json={"content": msg})
@@ -131,8 +153,13 @@ def pegar_membros(url):
 def atualizar_membros():
 
     global MEMBROS_VIRTUE
+    global MEMBROS_PEACE
 
     print("\n🔄 Atualizando membros...\n")
+
+    # =========================
+    # VIRTUE
+    # =========================
 
     try:
 
@@ -148,11 +175,11 @@ def atualizar_membros():
             print(f"✅ Virtue atualizada ({len(MEMBROS_VIRTUE)})")
 
         else:
-            print("⚠️ Lista inválida")
+            print("⚠️ Virtue inválida")
 
     except Exception as e:
 
-        print("❌ Erro atualizar membros:", e)
+        print("❌ Erro Virtue:", e)
 
 # =========================
 # PEGAR PVP
@@ -233,13 +260,15 @@ def analisar_pvp():
 
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
-    print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}\n")
+    print(f"🟦 Virtue membros: {len(MEMBROS_VIRTUE)}")
+    print(f"🟥 Peace membros: {len(MEMBROS_PEACE)}\n")
+
+    banco = carregar(ARQ_PVP_DB)
 
     for nome in MEMBROS_VIRTUE:
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 ENUMERATE = ORDEM REAL DO SITE
         for i, (base, tempo, ts) in enumerate(eventos):
 
             if not base or "killed" not in base:
@@ -264,40 +293,130 @@ def analisar_pvp():
                 for k in killers_norm
             )
 
+            killer_peace = any(
+                k in MEMBROS_PEACE
+                for k in killers_norm
+            )
+
             morto_virtue = morto_norm in MEMBROS_VIRTUE
+            morto_peace = morto_norm in MEMBROS_PEACE
 
-            # 🔥 apenas PvPs relacionados à Virtue
-            if not killer_virtue and not morto_virtue:
-                continue
+            # =========================
+            # RANDOM PVP (FEED)
+            # =========================
 
-            icon = "🟦" if killer_virtue else "🟥"
+            if killer_virtue or morto_virtue:
 
-            ordem = i
+                icon = "🟦" if killer_virtue else "🟥"
 
-            # 🔥 evita duplicados
-            if not any(
-                e[0] == base and e[1] == tempo
-                for e in FEED
-            ):
+                ordem = i
 
-                FEED.append((
-                    icon,
-                    base,
-                    tempo,
-                    ts,
-                    ordem
-                ))
+                if not any(
+                    e[1] == base and e[2] == tempo
+                    for e in FEED
+                ):
 
-            if len(FEED) > 500:
-                FEED.pop(0)
+                    FEED.append((
+                        icon,
+                        base,
+                        tempo,
+                        ts,
+                        ordem
+                    ))
 
-            print(f"{icon} {base} [{tempo}]")
+                if len(FEED) > 500:
+                    FEED.pop(0)
+
+            # =========================
+            # VIRTUE vs PEACE
+            # =========================
+
+            war_pvp = (
+                (killer_virtue and morto_peace)
+                or
+                (killer_peace and morto_virtue)
+            )
+
+            if war_pvp:
+
+                icon = "🟦" if killer_virtue else "🟥"
+
+                registro = {
+                    "icon": icon,
+                    "base": base,
+                    "tempo": tempo,
+                    "timestamp": ts.timestamp(),
+                    "horario": datetime.now(BRASIL).strftime("%d/%m/%Y %H:%M:%S")
+                }
+
+                existe = any(
+                    x["base"] == base
+                    and x["tempo"] == tempo
+                    for x in banco
+                )
+
+                if not existe:
+
+                    banco.append(registro)
+
+                    print(f"{icon} {base} [{tempo}]")
 
         time.sleep(0.3)
+
+    salvar(ARQ_PVP_DB, banco)
 
 # =========================
 # MONTAR MSG
 # =========================
+
+# =========================
+# PAINEL WAR
+# =========================
+
+def montar_msg_war():
+
+    banco = carregar(ARQ_PVP_DB)
+
+    msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
+    msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
+
+    if not banco:
+
+        msg += "_Nenhum PvP recente entre guilds._\n"
+
+        return msg
+
+    # 🔥 MAIS RECENTES PRIMEIRO
+    banco.sort(
+        key=lambda x: x["timestamp"],
+        reverse=True
+    )
+
+    for pvp in banco[:10]:
+
+        icon = pvp["icon"]
+
+        killers, morto = normalizar_kill(pvp["base"])
+
+        killers_lista = killers.split(" & ")
+
+        killers_fmt = " and ".join([
+            f"**{k.strip()}**"
+            for k in killers_lista
+        ])
+
+        morto_fmt = f"**{morto.strip()}**"
+
+        tempo = pvp["tempo"]
+
+        msg += (
+            f"{icon} "
+            f"{killers_fmt} killed "
+            f"{morto_fmt} "
+            f"- _[{tempo}]_\n"
+        )
+
+    return msg[:1900]
 
 def montar_msg_virtue():
 
@@ -370,7 +489,11 @@ while True:
 
         analisar_pvp()
 
-        msg = montar_msg_virtue()
+        msg = (
+            montar_msg_war()
+            + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            + montar_msg_virtue()
+        )
 
         if msg_id:
 
