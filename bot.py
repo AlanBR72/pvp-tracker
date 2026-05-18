@@ -393,6 +393,7 @@ def analisar_pvp():
                 isinstance(p, dict)
                 and p.get("base") == base
                 and p.get("tempo") == tempo
+                and p.get("ordem") == i
                 for p in banco
             )
 
