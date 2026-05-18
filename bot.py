@@ -271,13 +271,25 @@ def analisar_pvp():
 
         eventos = pegar_pvp(nome)
 
-        # 🔥 ordem real do site
+        if not isinstance(eventos, list):
+            continue
+
         for i, evento in enumerate(eventos):
 
-            if len(evento) < 3:
+            # 🔥 proteção absoluta
+            if (
+                not evento
+                or not isinstance(evento, (list, tuple))
+                or len(evento) < 3
+            ):
                 continue
 
-            base, tempo, ts = evento[:3]
+            try:
+                base = evento[0]
+                tempo = evento[1]
+                ts = evento[2]
+            except:
+                continue
 
             if not base or "killed" not in base:
                 continue
@@ -300,23 +312,33 @@ def analisar_pvp():
             # FEED RANDOM
             # =====================================
 
-            if not any(
-                e[0] == base and e[1] == tempo
+            existe_feed = any(
+                len(e) >= 2
+                and e[0] == base
+                and e[1] == tempo
                 for e in FEED
-            ):
+            )
+
+            if not existe_feed:
+
+                ts_int = 0
+
+                try:
+                    ts_int = int(ts.timestamp())
+                except:
+                    pass
 
                 FEED.append((
                     base,
                     tempo,
-                    int(ts.timestamp()),
+                    ts_int,
                     i
                 ))
 
-            # limita feed
             FEED = FEED[-500:]
 
             # =====================================
-            # FILTRO VIRTUE VS PEACE
+            # FILTRO WAR
             # =====================================
 
             killer_virtue = any(
@@ -343,15 +365,22 @@ def analisar_pvp():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            # evita duplicado
             ja_existe = any(
-                p["base"] == base
-                and p["tempo"] == tempo
+                isinstance(p, dict)
+                and p.get("base") == base
+                and p.get("tempo") == tempo
                 for p in banco
             )
 
             if ja_existe:
                 continue
+
+            ts_int = 0
+
+            try:
+                ts_int = int(ts.timestamp())
+            except:
+                pass
 
             print(f"{icon} {base} [{tempo}]")
 
@@ -359,15 +388,14 @@ def analisar_pvp():
                 "icon": icon,
                 "base": base,
                 "tempo": tempo,
-                "timestamp": int(ts.timestamp()),
+                "timestamp": ts_int,
                 "ordem": i
             })
 
-    # mantém últimos 300
     banco.sort(
         key=lambda x: (
-            -x["timestamp"],
-            x["ordem"]
+            -x.get("timestamp", 0),
+            x.get("ordem", 999999)
         )
     )
 
