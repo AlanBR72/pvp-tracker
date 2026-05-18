@@ -183,6 +183,30 @@ def atualizar_membros():
 
         print("❌ Erro Virtue:", e)
 
+    # =========================
+    # PEACE
+    # =========================
+
+    try:
+
+        p = pegar_membros(URL_PEACE)
+
+        if p and len(p) > 5:
+
+            MEMBROS_PEACE = [
+                limpar_nome(m)
+                for m in p
+            ]
+
+            print(f"✅ Peace atualizada ({len(MEMBROS_PEACE)})")
+
+        else:
+            print("⚠️ Peace inválida")
+
+    except Exception as e:
+
+        print("❌ Erro Peace:", e)
+
 # =========================
 # PEGAR PVP
 # =========================
@@ -465,8 +489,8 @@ def montar_msg_virtue():
     # 🔥 SORT IGUAL AO SITE
     filtrados.sort(
         key=lambda x: (
-            -(x[3].timestamp() if isinstance(x[3], datetime) else 0),
-            x[4]
+            -x[2],  # timestamp
+            x[3]    # ordem no site
         )
     )
 
@@ -476,7 +500,7 @@ def montar_msg_virtue():
 
     else:
 
-        for icon, base, tempo, ts, ordem in filtrados[:10]:
+        for base, tempo, ts, ordem in filtrados[:10]:
 
             killers, morto = normalizar_kill(base)
 
@@ -488,6 +512,21 @@ def montar_msg_virtue():
             ])
 
             morto_fmt = f"**{morto.strip()}**"
+
+            # 🔥 ICON RANDOM
+            killers_norm = [
+                limpar_nome(k)
+                for k in killers_lista
+            ]
+
+            morto_norm = limpar_nome(morto)
+
+            killer_virtue = any(
+                k in MEMBROS_VIRTUE
+                for k in killers_norm
+            )
+
+            icon = "🟦" if killer_virtue else "🟥"
 
             msg += (
                 f"{icon} "
