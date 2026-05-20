@@ -449,8 +449,10 @@ def montar_msg_war():
 
     # 🔥 MAIS RECENTES PRIMEIRO
     banco.sort(
-        key=lambda x: x["timestamp"],
-        reverse=True
+        key=lambda x: (
+            -x.get("timestamp", 0),
+            x.get("ordem", 999999)
+        )
     )
 
     for pvp in banco[:10]:
@@ -468,9 +470,44 @@ def montar_msg_war():
 
         morto_fmt = f"**{morto.strip()}**"
 
-        tempo = pvp["tempo"]
+        ts = pvp.get("timestamp", 0)
 
-        msg += (
+        agora = datetime.now().timestamp()
+
+        diff = int(agora - ts)
+
+        if diff < 60:
+
+            tempo = "less than a minute ago"
+
+        elif diff < 3600:
+
+            mins = diff // 60
+
+            if mins == 1:
+                tempo = "1 minute ago"
+            else:
+                tempo = f"{mins} minutes ago"
+
+        elif diff < 86400:
+
+            horas = diff // 3600
+
+            if horas == 1:
+                tempo = "about 1 hour ago"
+            else:
+                tempo = f"about {horas} hours ago"
+
+        else:
+
+            dias = diff // 86400
+
+            if dias == 1:
+                tempo = "1 day ago"
+            else:
+                tempo = f"{dias} days ago"
+
+            msg += (
             f"{icon} "
             f"{killers_fmt} killed "
             f"{morto_fmt} "
