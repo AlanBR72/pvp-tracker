@@ -430,6 +430,31 @@ def analisar_pvp():
 
     print(f"\n🧠 PvPs guild salvos: {len(banco)}")
 
+    # =====================================
+    # RETORNAR KILLS FORMATADAS
+    # =====================================
+
+    kills_site = []
+
+    for p in banco:
+
+        try:
+
+            killers, victim = normalizar_kill(
+                p["base"]
+            )
+
+            kills_site.append({
+                "killers": killers.split(" & "),
+                "victim": victim,
+                "tempo": p["tempo"]
+            })
+
+        except:
+            continue
+
+    return kills_site
+
 # =========================
 # MONTAR MSG
 # =========================
@@ -677,7 +702,9 @@ while True:
 
             ultimo_update_membros = time.time()
 
-        analisar_pvp()
+        kills_site = analisar_pvp()
+
+        kills_filtradas = filtrar_pvp_tracker(kills_site)
 
         msg = (
             gerar_msg_pvp_tracker(kills_filtradas)
