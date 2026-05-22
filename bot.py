@@ -470,57 +470,57 @@ def tempo_relativo(ts):
 
 def filtrar_pvp_tracker(kills_site):
 
-kills_filtradas = []
+    kills_filtradas = []
 
-for kill in kills_site:
+    for kill in kills_site:
 
-    killers = kill["killers"]
-    victim = kill["victim"]
+        killers = kill["killers"]
+        victim = kill["victim"]
 
-    killers_lower = [
-        k.lower()
-        for k in killers
-    ]
+        killers_lower = [
+            k.lower()
+            for k in killers
+        ]
 
-    victim_lower = victim.lower()
+        victim_lower = victim.lower()
 
-    # =========================
-    # IDENTIFICAR LADOS
-    # =========================
+        # =========================
+        # IDENTIFICAR LADOS
+        # =========================
 
-    killer_virtue = any(
-        "virtue" in k or "culpa" in k
-        for k in killers_lower
-    )
+        killer_virtue = any(
+            "virtue" in k or "culpa" in k
+            for k in killers_lower
+        )
 
-    killer_peace = any(
-        "peace" in k
-        for k in killers_lower
-    )
+        killer_peace = any(
+            "peace" in k
+            for k in killers_lower
+        )
 
-    victim_virtue = (
-        "virtue" in victim_lower
-        or "culpa" in victim_lower
-    )
+        victim_virtue = (
+            "virtue" in victim_lower
+            or "culpa" in victim_lower
+        )
 
-    victim_peace = (
-        "peace" in victim_lower
-    )
+        victim_peace = (
+            "peace" in victim_lower
+        )
 
-    # =========================
-    # FILTRAR APENAS
-    # VIRTUE vs PEACE
-    # =========================
+        # =========================
+        # FILTRAR APENAS
+        # VIRTUE vs PEACE
+        # =========================
 
-    if (
-        killer_virtue and victim_peace
-    ) or (
-        killer_peace and victim_virtue
-    ):
+        if (
+            killer_virtue and victim_peace
+        ) or (
+            killer_peace and victim_virtue
+        ):
 
-        kills_filtradas.append(kill)
+            kills_filtradas.append(kill)
 
-return kills_filtradas
+    return kills_filtradas
 
 def gerar_msg_pvp_tracker(kills_filtradas):
 
