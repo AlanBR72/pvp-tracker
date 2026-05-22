@@ -524,74 +524,74 @@ def filtrar_pvp_tracker(kills_site):
 
 def gerar_msg_pvp_tracker(kills_filtradas):
 
-msg = ""
+    msg = ""
 
-msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
-msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
+    msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
+    msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-# NÃO usar sorted()
-# NÃO usar set()
-# NÃO usar dict()
-# manter ordem ORIGINAL do site
+    # NÃO usar sorted()
+    # NÃO usar set()
+    # NÃO usar dict()
+    # manter ordem ORIGINAL do site
 
-for kill in kills_filtradas:
+    for kill in kills_filtradas:
 
-    killers = kill["killers"]
-    victim = kill["victim"]
-    tempo = kill["tempo"]
+        killers = kill["killers"]
+        victim = kill["victim"]
+        tempo = kill["tempo"]
 
-    killers_lower = [
-        k.lower()
-        for k in killers
-    ]
+        killers_lower = [
+            k.lower()
+            for k in killers
+        ]
 
-    victim_lower = victim.lower()
+        victim_lower = victim.lower()
 
-    killer_virtue = any(
-        "virtue" in k or "culpa" in k
-        for k in killers_lower
-    )
+        killer_virtue = any(
+            "virtue" in k or "culpa" in k
+            for k in killers_lower
+        )
 
-    killer_peace = any(
-        "peace" in k
-        for k in killers_lower
-    )
+        killer_peace = any(
+            "peace" in k
+            for k in killers_lower
+        )
 
-    victim_virtue = (
-        "virtue" in victim_lower
-        or "culpa" in victim_lower
-    )
+        victim_virtue = (
+            "virtue" in victim_lower
+            or "culpa" in victim_lower
+        )
 
-    victim_peace = (
-        "peace" in victim_lower
-    )
+        victim_peace = (
+            "peace" in victim_lower
+        )
 
-    # =========================
-    # COR DO LADO
-    # =========================
+        # =========================
+        # COR DO LADO
+        # =========================
 
-    emoji = "🟦"
+        emoji = "🟦"
 
-    if killer_peace and victim_virtue:
-        emoji = "🟥"
+        if killer_peace and victim_virtue:
+            emoji = "🟥"
 
-    # =========================
-    # FORMATAR KILLERS
-    # =========================
+        # =========================
+        # FORMATAR KILLERS
+        # =========================
 
-    killers_txt = " and ".join(
-        f"**{k}**"
-        for k in killers
-    )
+        killers_txt = " and ".join(
+            f"**{k}**"
+            for k in killers
+        )
 
-    msg += (
-        f"{emoji} "
-        f"{killers_txt} killed "
-        f"**{victim}** "
-        f"- _[{tempo}]_\n"
-    )
+        msg += (
+            f"{emoji} "
+            f"{killers_txt} killed "
+            f"**{victim}** "
+            f"- _[{tempo}]_\n"
+        )
 
-return msg
+    return msg
 
 def montar_msg_virtue():
 
