@@ -434,6 +434,41 @@ def analisar_pvp():
 # MONTAR MSG
 # =========================
 
+def tempo_relativo(ts):
+
+    agora = int(datetime.now().timestamp())
+
+    diff = agora - ts
+
+    if diff < 60:
+        return "less than a minute ago"
+
+    minutos = diff // 60
+
+    if minutos < 60:
+
+        if minutos == 1:
+            return "1 minute ago"
+
+        return f"{minutos} minutes ago"
+
+    horas = minutos // 60
+
+    if horas < 24:
+
+        if horas == 1:
+            return "about 1 hour ago"
+
+        return f"about {horas} hours ago"
+
+    dias = horas // 24
+
+    if dias == 1:
+        return "1 day ago"
+
+    return f"{dias} days ago"
+
+
 def montar_msg_war():
 
     banco = carregar(ARQ_PVP_DB)
@@ -449,17 +484,17 @@ def montar_msg_war():
 
     # 🔥 MAIS RECENTES PRIMEIRO
     banco.sort(
-        key=lambda x: (
-            -x.get("timestamp", 0),
-            x.get("ordem", 999999)
-        )
+        key=lambda x: x.get("timestamp", 0),
+        reverse=True
     )
 
     for pvp in banco[:10]:
 
         icon = pvp["icon"]
 
-        killers, morto = normalizar_kill(pvp["base"])
+        killers, morto = normalizar_kill(
+            pvp["base"]
+        )
 
         killers_lista = killers.split(" & ")
 
@@ -470,44 +505,11 @@ def montar_msg_war():
 
         morto_fmt = f"**{morto.strip()}**"
 
-        ts = pvp.get("timestamp", 0)
+        tempo = tempo_relativo(
+            pvp.get("timestamp", 0)
+        )
 
-        agora = datetime.now().timestamp()
-
-        diff = int(agora - ts)
-
-        if diff < 60:
-
-            tempo = "less than a minute ago"
-
-        elif diff < 3600:
-
-            mins = diff // 60
-
-            if mins == 1:
-                tempo = "1 minute ago"
-            else:
-                tempo = f"{mins} minutes ago"
-
-        elif diff < 86400:
-
-            horas = diff // 3600
-
-            if horas == 1:
-                tempo = "about 1 hour ago"
-            else:
-                tempo = f"about {horas} hours ago"
-
-        else:
-
-            dias = diff // 86400
-
-            if dias == 1:
-                tempo = "1 day ago"
-            else:
-                tempo = f"{dias} days ago"
-
-            msg += (
+        msg += (
             f"{icon} "
             f"{killers_fmt} killed "
             f"{morto_fmt} "
