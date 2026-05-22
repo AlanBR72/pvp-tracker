@@ -468,55 +468,130 @@ def tempo_relativo(ts):
 
     return f"{dias} days ago"
 
+def filtrar_pvp_tracker(kills_site):
 
-def montar_msg_war():
+kills_filtradas = []
 
-    banco = carregar(ARQ_PVP_DB)
+for kill in kills_site:
 
-    msg = "🗡️ **PVP TRACKER** 🗡️\n\n"
-    msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
+    killers = kill["killers"]
+    victim = kill["victim"]
 
-    if not banco:
+    killers_lower = [
+        k.lower()
+        for k in killers
+    ]
 
-        msg += "_Nenhum PvP recente entre guilds._\n"
+    victim_lower = victim.lower()
 
-        return msg
+    # =========================
+    # IDENTIFICAR LADOS
+    # =========================
 
-    # 🔥 MAIS RECENTES PRIMEIRO
-    banco.sort(
-        key=lambda x: x.get("timestamp", 0),
-        reverse=True
+    killer_virtue = any(
+        "virtue" in k or "culpa" in k
+        for k in killers_lower
     )
 
-    for pvp in banco[:10]:
+    killer_peace = any(
+        "peace" in k
+        for k in killers_lower
+    )
 
-        icon = pvp["icon"]
+    victim_virtue = (
+        "virtue" in victim_lower
+        or "culpa" in victim_lower
+    )
 
-        killers, morto = normalizar_kill(
-            pvp["base"]
-        )
+    victim_peace = (
+        "peace" in victim_lower
+    )
 
-        killers_lista = killers.split(" & ")
+    # =========================
+    # FILTRAR APENAS
+    # VIRTUE vs PEACE
+    # =========================
 
-        killers_fmt = " and ".join([
-            f"**{k.strip()}**"
-            for k in killers_lista
-        ])
+    if (
+        killer_virtue and victim_peace
+    ) or (
+        killer_peace and victim_virtue
+    ):
 
-        morto_fmt = f"**{morto.strip()}**"
+        kills_filtradas.append(kill)
 
-        tempo = tempo_relativo(
-            pvp.get("timestamp", 0)
-        )
+return kills_filtradas
 
-        msg += (
-            f"{icon} "
-            f"{killers_fmt} killed "
-            f"{morto_fmt} "
-            f"- _[{tempo}]_\n"
-        )
+def gerar_msg_pvp_tracker(kills_filtradas):
 
-    return msg[:1900]
+msg = ""
+
+msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
+msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
+
+# NÃO usar sorted()
+# NÃO usar set()
+# NÃO usar dict()
+# manter ordem ORIGINAL do site
+
+for kill in kills_filtradas:
+
+    killers = kill["killers"]
+    victim = kill["victim"]
+    tempo = kill["tempo"]
+
+    killers_lower = [
+        k.lower()
+        for k in killers
+    ]
+
+    victim_lower = victim.lower()
+
+    killer_virtue = any(
+        "virtue" in k or "culpa" in k
+        for k in killers_lower
+    )
+
+    killer_peace = any(
+        "peace" in k
+        for k in killers_lower
+    )
+
+    victim_virtue = (
+        "virtue" in victim_lower
+        or "culpa" in victim_lower
+    )
+
+    victim_peace = (
+        "peace" in victim_lower
+    )
+
+    # =========================
+    # COR DO LADO
+    # =========================
+
+    emoji = "🟦"
+
+    if killer_peace and victim_virtue:
+        emoji = "🟥"
+
+    # =========================
+    # FORMATAR KILLERS
+    # =========================
+
+    killers_txt = " and ".join(
+        f"**{k}**"
+        for k in killers
+    )
+
+    msg += (
+        f"{emoji} "
+        f"{killers_txt} killed "
+        f"**{victim}** "
+        f"- _[{tempo}]_\n"
+    )
+
+return msg
 
 def montar_msg_virtue():
 
@@ -605,7 +680,7 @@ while True:
         analisar_pvp()
 
         msg = (
-            montar_msg_war()
+            gerar_msg_pvp_tracker(kills_filtradas)
             + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
             + montar_msg_virtue()
         )
