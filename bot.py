@@ -531,7 +531,7 @@ while True:
         # =====================================
 
         msg = (
-            gerar_msg_pvp_tracker(kills_filtradas)
+            gerar_msg_pvp_tracker(kills_site)
             + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
             + montar_msg_virtue()
         )
