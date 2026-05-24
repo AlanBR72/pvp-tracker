@@ -554,67 +554,78 @@ def gerar_msg_pvp_tracker(kills_filtradas):
     msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
-    # NÃO usar sorted()
-    # NÃO usar set()
-    # NÃO usar dict()
-    # manter ordem ORIGINAL do site
+    # =====================================
+    # REMOVE DUPLICADAS
+    # =====================================
+
+    unicas = []
+    vistos = set()
 
     for kill in kills_filtradas:
 
-        killers = kill["killers"]
-        victim = kill["victim"]
-        tempo = kill["tempo"]
-
-        killers_lower = [
-            k.lower()
-            for k in killers
-        ]
-
-        victim_lower = victim.lower()
-
-        killer_virtue = any(
-            "virtue" in k or "culpa" in k
-            for k in killers_lower
+        key = (
+            tuple(kill["killers"]),
+            kill["victim"],
+            kill["tempo"]
         )
 
-        killer_peace = any(
-            "peace" in k
-            for k in killers_lower
-        )
+        if key in vistos:
+            continue
 
-        victim_virtue = (
-            "virtue" in victim_lower
-            or "culpa" in victim_lower
-        )
+        vistos.add(key)
+        unicas.append(kill)
 
-        victim_peace = (
-            "peace" in victim_lower
-        )
+    # =====================================
+    # LIMITAR
+    # =====================================
 
-        # =========================
-        # COR DO LADO
-        # =========================
+    unicas = unicas[:13]
 
-        emoji = "🟦"
+    if not unicas:
 
-        if killer_peace and victim_virtue:
-            emoji = "🟥"
+        msg += "_Nenhum PvP Virtue vs Peace encontrado._\n"
 
-        # =========================
-        # FORMATAR KILLERS
-        # =========================
+    else:
 
-        killers_txt = " and ".join(
-            f"**{k}**"
-            for k in killers
-        )
+        for kill in unicas:
 
-        msg += (
-            f"{emoji} "
-            f"{killers_txt} killed "
-            f"**{victim}** "
-            f"- _[{tempo}]_\n"
-        )
+            killers = kill["killers"]
+            victim = kill["victim"]
+            tempo = kill["tempo"]
+
+            killers_lower = [
+                k.lower()
+                for k in killers
+            ]
+
+            victim_lower = victim.lower()
+
+            killer_virtue = any(
+                "virtue" in k or "culpa" in k
+                for k in killers_lower
+            )
+
+            killer_peace = any(
+                "peace" in k
+                for k in killers_lower
+            )
+
+            emoji = "🟦"
+
+            if killer_peace:
+                emoji = "🟥"
+
+            killers_txt = " and ".join([
+                f"**{k}**"
+                for k in killers
+            ])
+
+            msg += (
+                f"{emoji} "
+                f"{killers_txt} killed "
+                f"**{victim}** "
+                f"- _[{tempo}]_\n"
+            )
 
     return msg
 
@@ -706,43 +717,7 @@ while True:
         # ANALISA PvPs
         # =====================================
 
-        analisar_pvp()
-
-        # =====================================
-        # CARREGA BANCO ATUALIZADO
-        # =====================================
-
-        banco = carregar(ARQ_PVP_DB)
-
-        if not isinstance(banco, list):
-            banco = []
-
-        # =====================================
-        # CONVERTE PARA FORMATO NOVO
-        # =====================================
-
-        kills_site = []
-
-        for p in banco:
-
-            try:
-
-                base = p["base"]
-                tempo = p["tempo"]
-
-                killers, victim = normalizar_kill(base)
-
-                if not killers or not victim:
-                    continue
-
-                kills_site.append({
-                    "killers": killers.split(" & "),
-                    "victim": victim,
-                    "tempo": tempo
-                })
-
-            except:
-                continue
+        kills_site = analisar_pvp()
 
         # =====================================
         # FILTRA WAR
