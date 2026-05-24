@@ -28,30 +28,11 @@ INTERVALO = 300  # 5 minutos
 
 MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
-ARQ_PVP_DB = "pvp_db.json"
 FEED = []
 
 # =========================
 # DISCORD
 # =========================
-
-def carregar(file):
-
-    if not os.path.exists(file):
-        return []
-
-    try:
-        with open(file, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-    except:
-        return []
-
-def salvar(file, data):
-
-    with open(file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
 
 def enviar_e_pegar_id(msg):
     r = requests.post(WEBHOOK + "?wait=true", json={"content": msg})
@@ -286,10 +267,7 @@ def analisar_pvp():
 
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
-    banco = carregar(ARQ_PVP_DB)
-
-    if not isinstance(banco, list):
-        banco = []
+    kills_war = []
 
     for nome in MEMBROS_VIRTUE:
 
@@ -300,18 +278,12 @@ def analisar_pvp():
 
         for i, evento in enumerate(eventos):
 
-            # 🔥 proteção absoluta
-            if (
-                not evento
-                or not isinstance(evento, (list, tuple))
-                or len(evento) < 3
-            ):
-                continue
-
             try:
+
                 base = evento[0]
                 tempo = evento[1]
                 ts = evento[2]
+
             except:
                 continue
 
@@ -389,17 +361,6 @@ def analisar_pvp():
 
             icon = "🟦" if killer_virtue else "🟥"
 
-            ja_existe = any(
-                isinstance(p, dict)
-                and p.get("base") == base
-                and p.get("tempo") == tempo
-                and p.get("ordem") == i
-                for p in banco
-            )
-
-            if ja_existe:
-                continue
-
             ts_int = 0
 
             try:
@@ -407,145 +368,33 @@ def analisar_pvp():
             except:
                 pass
 
-            print(f"{icon} {base} [{tempo}]")
-
-            banco.append({
+            kills_war.append({
                 "icon": icon,
-                "base": base,
+                "killers": killers_lista,
+                "victim": morto,
                 "tempo": tempo,
                 "timestamp": ts_int,
                 "ordem": i
             })
 
-    banco.sort(
+    # =====================================
+    # ORDENAR MAIS RECENTES
+    # =====================================
+
+    kills_war.sort(
         key=lambda x: (
-            -x.get("timestamp", 0),
-            x.get("ordem", 999999)
+            -x["timestamp"],
+            x["ordem"]
         )
     )
 
-    banco = banco[:300]
+    print(f"\n🧠 PvPs WAR encontrados: {len(kills_war)}")
 
-    salvar(ARQ_PVP_DB, banco)
-
-    print(f"\n🧠 PvPs guild salvos: {len(banco)}")
-
-    # =====================================
-    # RETORNAR KILLS FORMATADAS
-    # =====================================
-
-    kills_site = []
-
-    for p in banco:
-
-        try:
-
-            killers, victim = normalizar_kill(
-                p["base"]
-            )
-
-            kills_site.append({
-                "killers": killers.split(" & "),
-                "victim": victim,
-                "tempo": p["tempo"]
-            })
-
-        except:
-            continue
-
-    return kills_site
+    return kills_war
 
 # =========================
 # MONTAR MSG
 # =========================
-
-def tempo_relativo(ts):
-
-    agora = int(datetime.now().timestamp())
-
-    diff = agora - ts
-
-    if diff < 60:
-        return "less than a minute ago"
-
-    minutos = diff // 60
-
-    if minutos < 60:
-
-        if minutos == 1:
-            return "1 minute ago"
-
-        return f"{minutos} minutes ago"
-
-    horas = minutos // 60
-
-    if horas < 24:
-
-        if horas == 1:
-            return "about 1 hour ago"
-
-        return f"about {horas} hours ago"
-
-    dias = horas // 24
-
-    if dias == 1:
-        return "1 day ago"
-
-    return f"{dias} days ago"
-
-def filtrar_pvp_tracker(kills_site):
-
-    kills_filtradas = []
-
-    for kill in kills_site:
-
-        killers = kill["killers"]
-        victim = kill["victim"]
-
-        killers_lower = [
-            k.lower()
-            for k in killers
-        ]
-
-        victim_lower = victim.lower()
-
-        # =========================
-        # IDENTIFICAR LADOS
-        # =========================
-
-        killer_virtue = any(
-            "virtue" in k or "culpa" in k
-            for k in killers_lower
-        )
-
-        killer_peace = any(
-            "peace" in k
-            for k in killers_lower
-        )
-
-        victim_virtue = (
-            "virtue" in victim_lower
-            or "culpa" in victim_lower
-        )
-
-        victim_peace = (
-            "peace" in victim_lower
-        )
-
-        # =========================
-        # FILTRAR APENAS
-        # VIRTUE vs PEACE
-        # =========================
-
-        if (
-            killer_virtue and victim_peace
-        ) or (
-            killer_peace and victim_virtue
-        ):
-
-            kills_filtradas.append(kill)
-
-    return kills_filtradas
 
 def gerar_msg_pvp_tracker(kills_filtradas):
 
@@ -555,65 +404,23 @@ def gerar_msg_pvp_tracker(kills_filtradas):
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     # =====================================
-    # REMOVE DUPLICADAS
+    # PEGAR 10 MAIS RECENTES
     # =====================================
 
-    unicas = []
-    vistos = set()
+    kills_exibir = kills_filtradas[:10]
 
-    for kill in kills_filtradas:
+    if not kills_exibir:
 
-        key = (
-            tuple(kill["killers"]),
-            kill["victim"],
-            kill["tempo"]
-        )
-
-        if key in vistos:
-            continue
-
-        vistos.add(key)
-        unicas.append(kill)
-
-    # =====================================
-    # LIMITAR
-    # =====================================
-
-    unicas = unicas[:13]
-
-    if not unicas:
-
-        msg += "_Nenhum PvP Virtue vs Peace encontrado._\n"
+        msg += "_Nenhum PvP encontrado._\n"
 
     else:
 
-        for kill in unicas:
+        for kill in kills_exibir:
 
             killers = kill["killers"]
             victim = kill["victim"]
             tempo = kill["tempo"]
-
-            killers_lower = [
-                k.lower()
-                for k in killers
-            ]
-
-            victim_lower = victim.lower()
-
-            killer_virtue = any(
-                "virtue" in k or "culpa" in k
-                for k in killers_lower
-            )
-
-            killer_peace = any(
-                "peace" in k
-                for k in killers_lower
-            )
-
-            emoji = "🟦"
-
-            if killer_peace:
-                emoji = "🟥"
+            icon = kill["icon"]
 
             killers_txt = " and ".join([
                 f"**{k}**"
@@ -621,7 +428,7 @@ def gerar_msg_pvp_tracker(kills_filtradas):
             ])
 
             msg += (
-                f"{emoji} "
+                f"{icon} "
                 f"{killers_txt} killed "
                 f"**{victim}** "
                 f"- _[{tempo}]_\n"
@@ -718,14 +525,6 @@ while True:
         # =====================================
 
         kills_site = analisar_pvp()
-
-        # =====================================
-        # FILTRA WAR
-        # =====================================
-
-        kills_filtradas = filtrar_pvp_tracker(
-            kills_site
-        )
 
         # =====================================
         # GERAR MSG
