@@ -702,15 +702,69 @@ while True:
 
             ultimo_update_membros = time.time()
 
-        kills_site = analisar_pvp()
+        # =====================================
+        # ANALISA PvPs
+        # =====================================
 
-        kills_filtradas = filtrar_pvp_tracker(kills_site)
+        analisar_pvp()
+
+        # =====================================
+        # CARREGA BANCO ATUALIZADO
+        # =====================================
+
+        banco = carregar(ARQ_PVP_DB)
+
+        if not isinstance(banco, list):
+            banco = []
+
+        # =====================================
+        # CONVERTE PARA FORMATO NOVO
+        # =====================================
+
+        kills_site = []
+
+        for p in banco:
+
+            try:
+
+                base = p["base"]
+                tempo = p["tempo"]
+
+                killers, victim = normalizar_kill(base)
+
+                if not killers or not victim:
+                    continue
+
+                kills_site.append({
+                    "killers": killers.split(" & "),
+                    "victim": victim,
+                    "tempo": tempo
+                })
+
+            except:
+                continue
+
+        # =====================================
+        # FILTRA WAR
+        # =====================================
+
+        kills_filtradas = filtrar_pvp_tracker(
+            kills_site
+        )
+
+        # =====================================
+        # GERAR MSG
+        # =====================================
 
         msg = (
             gerar_msg_pvp_tracker(kills_filtradas)
             + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
             + montar_msg_virtue()
         )
+
+        # =====================================
+        # EDITAR MSG
+        # =====================================
 
         if msg_id:
 
