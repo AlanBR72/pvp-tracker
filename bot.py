@@ -115,6 +115,47 @@ def normalizar_kill(e):
     except:
         return "", ""
 
+
+def traduzir_tempo(txt):
+
+    t = txt.lower().strip()
+
+    nums = re.findall(r"\d+", t)
+
+    if not nums:
+        return txt
+
+    num = int(nums[0])
+
+    if "minute" in t:
+        return f"há {num} min"
+
+    if "hour" in t:
+        return f"há {num} h"
+
+    if "day" in t:
+        if num == 1:
+            return "há 1 dia"
+        return f"há {num} dias"
+
+    return txt
+
+def formatar_killers(killers):
+
+    return " + ".join([
+        f"**{k.strip()}**"
+        for k in killers
+        if k.strip()
+    ])
+
+def verbo_matar(qtd):
+
+    return "matou" if qtd == 1 else "mataram"
+
+def icon_para_cor(icon):
+
+    return "🔵" if icon == "🟦" else "🔴"
+
 # =========================
 # PEGAR MEMBROS
 # =========================
@@ -423,8 +464,9 @@ def gerar_msg_pvp_tracker(kills_filtradas):
 
     msg = ""
 
-    msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
-    msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
+    msg += "⛓️━━━━━━━━ **WAR STATUS** ━━━━━━━━⛓️\n\n"
+    msg += "🛡️ **Virtue** ⚔️ **Peace**\n"
+    msg += f"📌 PvPs registrados nas últimas **{LIMITE_PVP_HORAS} horas**\n\n"
 
     # =====================================
     # PEGAR 10 MAIS RECENTES
@@ -442,28 +484,25 @@ def gerar_msg_pvp_tracker(kills_filtradas):
 
             killers = kill["killers"]
             victim = kill["victim"]
-            tempo = kill["tempo"]
-            icon = kill["icon"]
+            tempo = traduzir_tempo(kill["tempo"])
+            icon = icon_para_cor(kill["icon"])
 
-            killers_txt = " and ".join([
-                f"**{k}**"
-                for k in killers
-            ])
+            killers_txt = formatar_killers(killers)
+            verbo = verbo_matar(len(killers))
 
             msg += (
-                f"{icon} "
-                f"{killers_txt} killed "
-                f"**{victim}** "
-                f"- _[{tempo}]_\n"
+                f"{icon} {killers_txt} {verbo} **{victim}**\n"
+                f"└─ ⏱️ {tempo}\n\n"
             )
 
-    return msg
+    return msg.rstrip()
 
 def montar_msg_virtue():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
-    msg = f"⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
+    msg = "☠️━━━━━━ **RANDOM KILLS** ━━━━━━☠️\n\n"
+    msg += "📡 Últimos PvPs encontrados\n\n"
 
     filtrados = FEED.copy()
 
@@ -487,12 +526,10 @@ def montar_msg_virtue():
 
             killers_lista = killers.split(" & ")
 
-            killers_fmt = " and ".join([
-                f"**{k.strip()}**"
-                for k in killers_lista
-            ])
-
+            killers_fmt = formatar_killers(killers_lista)
             morto_fmt = f"**{morto.strip()}**"
+            tempo_fmt = traduzir_tempo(tempo)
+            verbo = verbo_matar(len(killers_lista))
 
             # 🔥 ICON RANDOM
             killers_norm = [
@@ -500,23 +537,19 @@ def montar_msg_virtue():
                 for k in killers_lista
             ]
 
-            morto_norm = limpar_nome(morto)
-
             killer_virtue = any(
                 k in MEMBROS_VIRTUE
                 for k in killers_norm
             )
 
-            icon = "🟦" if killer_virtue else "🟥"
+            icon = "🔵" if killer_virtue else "🔴"
 
             msg += (
-                f"{icon} "
-                f"{killers_fmt} killed "
-                f"{morto_fmt} "
-                f"- _[{tempo}]_\n"
+                f"{icon} {killers_fmt} {verbo} {morto_fmt}\n"
+                f"└─ ⏱️ {tempo_fmt}\n\n"
             )
 
-    msg += f"\n**⏱️ Atualizado:** _{agora}_"
+    msg += f"🕒 **Última atualização:** {agora}"
 
     return msg[:1900]
 
@@ -555,7 +588,7 @@ while True:
 
         msg = (
             gerar_msg_pvp_tracker(kills_site)
-            + "\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            + "\n\n"
             + montar_msg_virtue()
         )
 
