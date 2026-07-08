@@ -373,11 +373,15 @@ def analisar_pvp():
             if not is_war:
                 continue
 
-            # Evita repetir a mesma kill quando aparecer em mais de um perfil da Virtue
+            # Não remove kills iguais pelo mesmo killer/vítima/tempo,
+            # porque o site pode listar 2 ou 3 kills iguais no mesmo horário textual
+            # Exemplo: "Virtuelessz killed Peace Aquillees - about 12 hours ago" repetido 3x.
+            # A chave inclui o perfil lido e a ordem da linha para manter essas repetições.
             chave = (
-                limpar_nome(" & ".join(killers_lista)),
-                morto_norm,
-                tempo
+                limpar_nome(nome),
+                limpar_nome(base),
+                tempo,
+                i
             )
 
             if chave in vistos_war:
