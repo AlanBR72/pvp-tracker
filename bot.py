@@ -22,6 +22,9 @@ BRASIL = pytz.timezone("America/Sao_Paulo")
 
 INTERVALO = 300  # 5 minutos
 
+# Mostrar somente PvPs das últimas 23 horas
+LIMITE_PVP_HORAS = 23
+
 # =========================
 # CACHE
 # =========================
@@ -268,7 +271,12 @@ def analisar_pvp():
     print("\n🔎 INICIANDO ANALISE PVP...\n")
 
     kills_war = []
+    vistos_war = set()
 
+    agora = datetime.now()
+    limite = agora - timedelta(hours=LIMITE_PVP_HORAS)
+
+    # Mantém a busca em apenas UMA guilda: Virtue
     for nome in MEMBROS_VIRTUE:
 
         eventos = pegar_pvp(nome)
@@ -279,15 +287,17 @@ def analisar_pvp():
         for i, evento in enumerate(eventos):
 
             try:
-
                 base = evento[0]
                 tempo = evento[1]
                 ts = evento[2]
-
             except:
                 continue
 
             if not base or "killed" not in base:
+                continue
+
+            # Só mostra PvPs dentro das últimas 23 horas
+            if ts < limite:
                 continue
 
             killers, morto = normalizar_kill(base)
@@ -304,6 +314,13 @@ def analisar_pvp():
 
             morto_norm = limpar_nome(morto)
 
+            ts_int = 0
+
+            try:
+                ts_int = int(ts.timestamp())
+            except:
+                pass
+
             # =====================================
             # FEED RANDOM
             # =====================================
@@ -317,13 +334,6 @@ def analisar_pvp():
 
             if not existe_feed:
 
-                ts_int = 0
-
-                try:
-                    ts_int = int(ts.timestamp())
-                except:
-                    pass
-
                 FEED.append((
                     base,
                     tempo,
@@ -331,7 +341,11 @@ def analisar_pvp():
                     i
                 ))
 
-            FEED = FEED[-500:]
+            # Mantém somente cache recente para não mostrar PvP velho
+            FEED = [
+                e for e in FEED
+                if len(e) >= 3 and e[2] >= int(limite.timestamp())
+            ][-500:]
 
             # =====================================
             # FILTRO WAR
@@ -359,14 +373,19 @@ def analisar_pvp():
             if not is_war:
                 continue
 
+            # Evita repetir a mesma kill quando aparecer em mais de um perfil da Virtue
+            chave = (
+                limpar_nome(" & ".join(killers_lista)),
+                morto_norm,
+                tempo
+            )
+
+            if chave in vistos_war:
+                continue
+
+            vistos_war.add(chave)
+
             icon = "🟦" if killer_virtue else "🟥"
-
-            ts_int = 0
-
-            try:
-                ts_int = int(ts.timestamp())
-            except:
-                pass
 
             kills_war.append({
                 "icon": icon,
@@ -388,7 +407,7 @@ def analisar_pvp():
         )
     )
 
-    print(f"\n🧠 PvPs WAR encontrados: {len(kills_war)}")
+    print(f"\n🧠 PvPs WAR encontrados nas últimas {LIMITE_PVP_HORAS}h: {len(kills_war)}")
 
     return kills_war
 
@@ -400,7 +419,8 @@ def gerar_msg_pvp_tracker(kills_filtradas):
 
     msg = ""
 
-    msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
+    msg += "🗡️ **PVP TRACKER** 🗡️\n"
+    msg += f"_Últimas {LIMITE_PVP_HORAS} horas_\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     # =====================================
@@ -440,7 +460,7 @@ def montar_msg_virtue():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
-    msg = "⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
+    msg = f"⚔️ **ULTIMOS PvPs (random)** ⚔️\n_Últimas {LIMITE_PVP_HORAS} horas_\n\n"
 
     filtrados = FEED.copy()
 
