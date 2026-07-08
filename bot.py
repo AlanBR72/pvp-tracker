@@ -423,8 +423,7 @@ def gerar_msg_pvp_tracker(kills_filtradas):
 
     msg = ""
 
-    msg += "🗡️ **PVP TRACKER** 🗡️\n"
-    msg += f"_Últimas {LIMITE_PVP_HORAS} horas_\n\n"
+    msg += "🗡️ **PVP TRACKER** 🗡️\n\n"
     msg += "**🟦 Virtue  ⚔️  Peace 🟥**\n\n"
 
     # =====================================
@@ -464,7 +463,7 @@ def montar_msg_virtue():
 
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
-    msg = f"⚔️ **ULTIMOS PvPs (random)** ⚔️\n_Últimas {LIMITE_PVP_HORAS} horas_\n\n"
+    msg = f"⚔️ **ULTIMOS PvPs (random)** ⚔️\n\n"
 
     filtrados = FEED.copy()
 
