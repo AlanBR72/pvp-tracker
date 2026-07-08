@@ -465,7 +465,7 @@ def gerar_msg_pvp_tracker(kills_filtradas):
     msg = ""
 
     msg += "⛓️━━━━━━━━ **WAR STATUS** ━━━━━━━━⛓️\n\n"
-    msg += "🛡️ **Virtue** ⚔️ **Peace**\n"
+    msg += "🛡️ **Virtue**  ⚔️  **Peace** 👹\n"
     msg += f"📌 PvPs registrados nas últimas **{LIMITE_PVP_HORAS} horas**\n\n"
 
     # =====================================
