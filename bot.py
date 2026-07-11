@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 import time
 import unicodedata
@@ -25,6 +26,11 @@ INTERVALO = 300  # 5 minutos
 LIMITE_PVP_HORAS = 23
 MAX_EVENTOS_PAINEL = 10
 
+# Proteção contra bloqueio 429 do site.
+ATRASO_ENTRE_PERFIS = 1.5  # segundos entre páginas de personagens
+MAX_TENTATIVAS_429 = 3
+ESPERA_PADRAO_429 = 60
+
 # Salva os IDs para continuar editando as mesmas mensagens após reiniciar o bot.
 ARQUIVO_IDS = "painel_ids.json"
 
@@ -35,6 +41,17 @@ ARQUIVO_IDS = "painel_ids.json"
 MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
 MEMBROS_INFERNAL = []
+
+# Reutiliza a mesma conexão HTTP e envia um User-Agent comum.
+SESSAO = requests.Session()
+SESSAO.headers.update({
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0 Safari/537.36"
+    ),
+    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+})
 
 # =========================
 # DISCORD
@@ -215,7 +232,7 @@ def verbo_matar(quantidade):
 
 
 def pegar_membros(url):
-    resposta = requests.get(url, timeout=20)
+    resposta = SESSAO.get(url, timeout=20)
     resposta.raise_for_status()
     soup = BeautifulSoup(resposta.text, "html.parser")
 
@@ -270,44 +287,74 @@ def atualizar_membros():
 def pegar_pvp(nome):
     url = "https://www.rucoyonline.com/characters/" + quote(nome)
 
-    try:
-        resposta = requests.get(url, timeout=15)
-        resposta.raise_for_status()
-        soup = BeautifulSoup(resposta.text, "html.parser")
-        texto = soup.get_text(" ")
+    for tentativa in range(1, MAX_TENTATIVAS_429 + 1):
+        try:
+            resposta = SESSAO.get(url, timeout=20)
 
-        marcador = "Recent character kills and deaths"
-        if marcador not in texto:
-            return []
+            if resposta.status_code == 429:
+                retry_after = resposta.headers.get("Retry-After", "")
 
-        parte = texto.split(marcador, 1)[1]
-        tokens = parte.split()
-        eventos = []
-        atual = []
+                try:
+                    espera = max(int(retry_after), ESPERA_PADRAO_429)
+                except (TypeError, ValueError):
+                    espera = ESPERA_PADRAO_429 * tentativa
 
-        for palavra in tokens:
-            atual.append(palavra)
+                # Pequena variação evita que todas as novas tentativas ocorram
+                # exatamente no mesmo instante.
+                espera += random.uniform(1, 5)
 
-            if "ago" not in palavra.lower():
-                continue
+                print(
+                    f"⏳ Limite 429 em {nome}. "
+                    f"Aguardando {espera:.0f}s antes da tentativa "
+                    f"{tentativa + 1}/{MAX_TENTATIVAS_429}..."
+                )
 
-            frase = " ".join(atual).strip()
+                if tentativa < MAX_TENTATIVAS_429:
+                    time.sleep(espera)
+                    continue
+
+                print(f"⚠️ PvP de {nome} ignorado neste ciclo após 429.")
+                return []
+
+            resposta.raise_for_status()
+            soup = BeautifulSoup(resposta.text, "html.parser")
+            texto = soup.get_text(" ")
+
+            marcador = "Recent character kills and deaths"
+            if marcador not in texto:
+                return []
+
+            parte = texto.split(marcador, 1)[1]
+            tokens = parte.split()
+            eventos = []
             atual = []
 
-            if "killed" not in frase or "-" not in frase:
-                continue
+            for palavra in tokens:
+                atual.append(palavra)
 
-            base, tempo = frase.split("-", 1)
-            base = base.strip()
-            tempo = tempo.strip()
+                if "ago" not in palavra.lower():
+                    continue
 
-            if base and tempo:
-                eventos.append((base, tempo))
+                frase = " ".join(atual).strip()
+                atual = []
 
-        return eventos
-    except Exception as erro:
-        print(f"⚠️ Erro ao buscar PvP de {nome}:", erro)
-        return []
+                if "killed" not in frase or "-" not in frase:
+                    continue
+
+                base, tempo = frase.split("-", 1)
+                base = base.strip()
+                tempo = tempo.strip()
+
+                if base and tempo:
+                    eventos.append((base, tempo))
+
+            return eventos
+
+        except requests.RequestException as erro:
+            print(f"⚠️ Erro ao buscar PvP de {nome}:", erro)
+            return []
+
+    return []
 
 
 def analisar_pvps():
@@ -330,6 +377,10 @@ def analisar_pvps():
     vistos_infernal = set()
 
     for ordem_perfil, nome_norm in enumerate(MEMBROS_VIRTUE):
+        # O atraso entre perfis evita disparar dezenas de requisições de uma vez.
+        if ordem_perfil > 0:
+            time.sleep(ATRASO_ENTRE_PERFIS + random.uniform(0.1, 0.5))
+
         eventos = pegar_pvp(nome_norm)
 
         for ordem_linha, (base, tempo) in enumerate(eventos):
