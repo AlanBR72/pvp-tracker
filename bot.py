@@ -1,12 +1,14 @@
+import json
+import os
+import re
+import time
+import unicodedata
+from datetime import datetime
+from urllib.parse import quote
+
+import pytz
 import requests
 from bs4 import BeautifulSoup
-import time
-from datetime import datetime, timedelta
-import pytz
-import re
-import unicodedata
-import os
-import json
 
 # =========================
 # CONFIG
@@ -15,601 +17,485 @@ import json
 WEBHOOK = "https://discord.com/api/webhooks/1496156584630419608/pgGWnevw4PvV_VryvMVoXTaML_Xep51evEdzFXg8inMYbX-ogI7hhs1BhcvYmekCG9l0"
 
 URL_VIRTUE = "https://www.rucoyonline.com/guild/Guilt%20Of%20Virtue"
-
 URL_PEACE = "https://www.rucoyonline.com/guild/Peace%20Killers"
+URL_INFERNAL = "https://www.rucoyonline.com/guild/Infernal%20Cruelty"
 
 BRASIL = pytz.timezone("America/Sao_Paulo")
-
 INTERVALO = 300  # 5 minutos
-
-# Mostrar somente PvPs das últimas 23 horas
 LIMITE_PVP_HORAS = 23
+MAX_EVENTOS_PAINEL = 10
+
+# Salva os IDs para continuar editando as mesmas mensagens após reiniciar o bot.
+ARQUIVO_IDS = "painel_ids.json"
 
 # =========================
-# CACHE
+# CACHE DE MEMBROS
 # =========================
 
 MEMBROS_VIRTUE = []
 MEMBROS_PEACE = []
-FEED = []
+MEMBROS_INFERNAL = []
 
 # =========================
 # DISCORD
 # =========================
 
-def enviar_e_pegar_id(msg):
-    r = requests.post(WEBHOOK + "?wait=true", json={"content": msg})
 
-    if r.status_code in (200, 201):
-        return r.json()["id"]
+def enviar_e_pegar_id(msg):
+    try:
+        resposta = requests.post(
+            WEBHOOK + "?wait=true",
+            json={"content": msg[:2000]},
+            timeout=20,
+        )
+
+        if resposta.status_code in (200, 201):
+            return resposta.json().get("id")
+
+        print("❌ Erro ao enviar mensagem:", resposta.status_code, resposta.text)
+    except Exception as erro:
+        print("❌ Erro ao enviar mensagem:", erro)
 
     return None
 
+
 def editar(msg_id, msg):
-    requests.patch(
-        WEBHOOK + f"/messages/{msg_id}",
-        json={"content": msg}
-    )
+    try:
+        resposta = requests.patch(
+            WEBHOOK + f"/messages/{msg_id}",
+            json={"content": msg[:2000]},
+            timeout=20,
+        )
+
+        if resposta.status_code in (200, 204):
+            return True
+
+        print("⚠️ Não foi possível editar:", resposta.status_code, resposta.text)
+    except Exception as erro:
+        print("❌ Erro ao editar mensagem:", erro)
+
+    return False
+
+
+def carregar_ids():
+    if not os.path.exists(ARQUIVO_IDS):
+        return {"peace": None, "infernal": None, "random": None}
+
+    try:
+        with open(ARQUIVO_IDS, "r", encoding="utf-8") as arquivo:
+            dados = json.load(arquivo)
+
+        return {
+            "peace": dados.get("peace"),
+            "infernal": dados.get("infernal"),
+            "random": dados.get("random"),
+        }
+    except Exception as erro:
+        print("⚠️ Erro ao carregar IDs:", erro)
+        return {"peace": None, "infernal": None, "random": None}
+
+
+def salvar_ids(ids):
+    try:
+        with open(ARQUIVO_IDS, "w", encoding="utf-8") as arquivo:
+            json.dump(ids, arquivo, ensure_ascii=False, indent=2)
+    except Exception as erro:
+        print("⚠️ Erro ao salvar IDs:", erro)
+
+
+def atualizar_painel(ids, chave, mensagem):
+    msg_id = ids.get(chave)
+
+    if msg_id and editar(msg_id, mensagem):
+        return
+
+    novo_id = enviar_e_pegar_id(mensagem)
+
+    if novo_id:
+        ids[chave] = novo_id
+        salvar_ids(ids)
 
 # =========================
 # UTILS
 # =========================
 
-def limpar_nome(nome):
 
+def limpar_nome(nome):
     nome = unicodedata.normalize("NFKC", nome)
     nome = nome.replace("\u00a0", " ")
     nome = re.sub(r"\s+", " ", nome)
-
     return nome.strip().lower()
 
-def tempo_para_datetime(txt):
 
-    now = datetime.now()
+def tempo_para_segundos(txt):
+    """Converte o texto do site em idade, em segundos."""
+    texto = txt.lower().strip()
+    numeros = re.findall(r"\d+", texto)
 
-    txt = txt.lower()
+    # Textos sem número, como "a few seconds ago", ficam no topo.
+    if not numeros:
+        if "second" in texto:
+            return 0
+        return 10**12
 
-    nums = re.findall(r"\d+", txt)
+    numero = int(numeros[0])
 
-    if not nums:
-        return now
+    if "second" in texto:
+        return numero
+    if "minute" in texto:
+        return numero * 60
+    if "hour" in texto:
+        return numero * 60 * 60
+    if "day" in texto:
+        return numero * 24 * 60 * 60
+    if "week" in texto:
+        return numero * 7 * 24 * 60 * 60
 
-    num = int(nums[0])
+    return 10**12
 
-    if "minute" in txt:
-        return now - timedelta(minutes=num)
 
-    if "hour" in txt:
-        return now - timedelta(hours=num)
+def dentro_do_limite(tempo):
+    return tempo_para_segundos(tempo) <= LIMITE_PVP_HORAS * 60 * 60
 
-    if "day" in txt:
-        return now - timedelta(days=num)
 
-    return now
-
-def normalizar_kill(e):
-
+def normalizar_kill(base):
     try:
-
-        base = e.split(" - ")[0].strip()
-
         partes = base.split("killed", 1)
 
         if len(partes) != 2:
-            return "", ""
+            return [], ""
 
         killers_txt, morto = partes
-
         killers_txt = killers_txt.replace(" and ", ",")
 
-        killers_lista = [
-            k.strip()
-            for k in killers_txt.split(",")
-            if k.strip()
+        killers = [
+            killer.strip()
+            for killer in killers_txt.split(",")
+            if killer.strip()
         ]
 
-        killers_norm = " & ".join(killers_lista)
-
-        return killers_norm, morto.strip()
-
-    except:
-        return "", ""
+        return killers, morto.strip()
+    except Exception:
+        return [], ""
 
 
 def traduzir_tempo(txt):
+    texto = txt.lower().strip()
+    numeros = re.findall(r"\d+", texto)
 
-    t = txt.lower().strip()
-
-    nums = re.findall(r"\d+", t)
-
-    if not nums:
+    if not numeros:
+        if "second" in texto:
+            return "há poucos segundos"
         return txt
 
-    num = int(nums[0])
+    numero = int(numeros[0])
 
-    if "minute" in t:
-        return f"há {num} min"
-
-    if "hour" in t:
-        return f"há {num} h"
-
-    if "day" in t:
-        if num == 1:
-            return "há 1 dia"
-        return f"há {num} dias"
+    if "second" in texto:
+        return f"há {numero} s"
+    if "minute" in texto:
+        return f"há {numero} min"
+    if "hour" in texto:
+        return f"há {numero} h"
+    if "day" in texto:
+        return "há 1 dia" if numero == 1 else f"há {numero} dias"
 
     return txt
 
+
 def formatar_killers(killers):
+    return " + ".join(f"**{killer}**" for killer in killers)
 
-    return " + ".join([
-        f"**{k.strip()}**"
-        for k in killers
-        if k.strip()
-    ])
 
-def verbo_matar(qtd):
-
-    return "matou" if qtd == 1 else "mataram"
-
-def icon_para_cor(icon):
-
-    return "🔵" if icon == "🟦" else "🔴"
+def verbo_matar(quantidade):
+    return "matou" if quantidade == 1 else "mataram"
 
 # =========================
-# PEGAR MEMBROS
+# MEMBROS
 # =========================
+
 
 def pegar_membros(url):
-
-    r = requests.get(url, timeout=15)
-
-    soup = BeautifulSoup(r.text, "html.parser")
+    resposta = requests.get(url, timeout=20)
+    resposta.raise_for_status()
+    soup = BeautifulSoup(resposta.text, "html.parser")
 
     membros = []
 
-    for a in soup.select("a[href*='/characters/']"):
-
-        nome = a.text.strip()
-
+    for link in soup.select("a[href*='/characters/']"):
+        nome = link.get_text(strip=True)
         if nome:
             membros.append(nome)
 
-    return list(set(membros))
+    # Preserva a ordem e remove repetidos.
+    return list(dict.fromkeys(membros))
+
 
 def atualizar_membros():
+    global MEMBROS_VIRTUE, MEMBROS_PEACE, MEMBROS_INFERNAL
 
-    global MEMBROS_VIRTUE
-    global MEMBROS_PEACE
+    print("\n🔄 Atualizando listas de membros...\n")
 
-    print("\n🔄 Atualizando membros...\n")
+    configuracoes = [
+        ("Virtue", URL_VIRTUE, "virtue"),
+        ("Peace Killers", URL_PEACE, "peace"),
+        ("Infernal Cruelty", URL_INFERNAL, "infernal"),
+    ]
 
-    # =========================
-    # VIRTUE
-    # =========================
+    for nome_guilda, url, chave in configuracoes:
+        try:
+            membros = pegar_membros(url)
 
-    try:
+            if not membros:
+                print(f"⚠️ Lista vazia: {nome_guilda}")
+                continue
 
-        v = pegar_membros(URL_VIRTUE)
+            normalizados = [limpar_nome(membro) for membro in membros]
 
-        if v and len(v) > 5:
+            if chave == "virtue":
+                MEMBROS_VIRTUE = normalizados
+            elif chave == "peace":
+                MEMBROS_PEACE = normalizados
+            else:
+                MEMBROS_INFERNAL = normalizados
 
-            MEMBROS_VIRTUE = [
-                limpar_nome(m)
-                for m in v
-            ]
-
-            print(f"✅ Virtue atualizada ({len(MEMBROS_VIRTUE)})")
-
-        else:
-            print("⚠️ Virtue inválida")
-
-    except Exception as e:
-
-        print("❌ Erro Virtue:", e)
-
-    # =========================
-    # PEACE
-    # =========================
-
-    try:
-
-        p = pegar_membros(URL_PEACE)
-
-        if p and len(p) > 5:
-
-            MEMBROS_PEACE = [
-                limpar_nome(m)
-                for m in p
-            ]
-
-            print(f"✅ Peace atualizada ({len(MEMBROS_PEACE)})")
-
-        else:
-            print("⚠️ Peace inválida")
-
-    except Exception as e:
-
-        print("❌ Erro Peace:", e)
+            print(f"✅ {nome_guilda}: {len(normalizados)} membros")
+        except Exception as erro:
+            print(f"❌ Erro ao atualizar {nome_guilda}:", erro)
 
 # =========================
-# PEGAR PVP
+# PVP
 # =========================
+
 
 def pegar_pvp(nome):
-
-    url = f"https://www.rucoyonline.com/characters/{nome.replace(' ', '%20')}"
+    url = "https://www.rucoyonline.com/characters/" + quote(nome)
 
     try:
-
-        r = requests.get(url, timeout=10)
-
-        soup = BeautifulSoup(r.text, "html.parser")
-
+        resposta = requests.get(url, timeout=15)
+        resposta.raise_for_status()
+        soup = BeautifulSoup(resposta.text, "html.parser")
         texto = soup.get_text(" ")
 
-        if "Recent character kills and deaths" not in texto:
+        marcador = "Recent character kills and deaths"
+        if marcador not in texto:
             return []
 
-        parte = texto.split("Recent character kills and deaths")[1]
-
+        parte = texto.split(marcador, 1)[1]
         tokens = parte.split()
-
         eventos = []
         atual = []
 
         for palavra in tokens:
-
             atual.append(palavra)
 
-            if "ago" in palavra:
+            if "ago" not in palavra.lower():
+                continue
 
-                frase = " ".join(atual)
+            frase = " ".join(atual).strip()
+            atual = []
 
-                if "killed" not in frase:
-                    atual = []
-                    continue
+            if "killed" not in frase or "-" not in frase:
+                continue
 
-                if "-" not in frase:
-                    atual = []
-                    continue
+            base, tempo = frase.split("-", 1)
+            base = base.strip()
+            tempo = tempo.strip()
 
-                parts = frase.split("-", 1)
-
-                if len(parts) < 2:
-                    atual = []
-                    continue
-
-                base = parts[0].strip()
-                tempo = parts[1].strip()
-
-                if not base or not tempo:
-                    atual = []
-                    continue
-
-                ts = tempo_para_datetime(tempo)
-
-                eventos.append((base, tempo, ts))
-
-                atual = []
+            if base and tempo:
+                eventos.append((base, tempo))
 
         return eventos
-
-    except Exception as e:
-
-        print("Erro pegar PvP:", e)
-
+    except Exception as erro:
+        print(f"⚠️ Erro ao buscar PvP de {nome}:", erro)
         return []
 
-# =========================
-# ANALISAR PVP
-# =========================
 
-def analisar_pvp():
+def analisar_pvps():
+    """
+    Busca somente nos perfis da Virtue.
 
-    global FEED
+    O feed é reconstruído em cada ciclo. Isso evita eventos antigos presos no
+    cache e garante a ordem correta: menor idade primeiro (4 min, 6 min, 8 min...).
+    """
+    print("\n🔎 Analisando PvPs da Virtue...\n")
 
-    print("\n🔎 INICIANDO ANALISE PVP...\n")
+    eventos_random = []
+    eventos_peace = []
+    eventos_infernal = []
 
-    kills_war = []
-    vistos_war = set()
+    # Remove apenas a duplicação do MESMO evento visto em perfis diferentes.
+    # O índice da linha preserva 2 ou 3 kills idênticas listadas no mesmo perfil.
+    vistos_random = set()
+    vistos_peace = set()
+    vistos_infernal = set()
 
-    agora = datetime.now()
-    limite = agora - timedelta(hours=LIMITE_PVP_HORAS)
+    for ordem_perfil, nome_norm in enumerate(MEMBROS_VIRTUE):
+        eventos = pegar_pvp(nome_norm)
 
-    # Mantém a busca em apenas UMA guilda: Virtue
-    for nome in MEMBROS_VIRTUE:
-
-        eventos = pegar_pvp(nome)
-
-        if not isinstance(eventos, list):
-            continue
-
-        for i, evento in enumerate(eventos):
-
-            try:
-                base = evento[0]
-                tempo = evento[1]
-                ts = evento[2]
-            except:
+        for ordem_linha, (base, tempo) in enumerate(eventos):
+            if not dentro_do_limite(tempo):
                 continue
 
-            if not base or "killed" not in base:
+            killers, vitima = normalizar_kill(base)
+            if not killers or not vitima:
                 continue
 
-            # Só mostra PvPs dentro das últimas 23 horas
-            if ts < limite:
-                continue
+            killers_norm = [limpar_nome(killer) for killer in killers]
+            vitima_norm = limpar_nome(vitima)
+            idade_segundos = tempo_para_segundos(tempo)
 
-            killers, morto = normalizar_kill(base)
+            killer_virtue = any(k in MEMBROS_VIRTUE for k in killers_norm)
+            vitima_virtue = vitima_norm in MEMBROS_VIRTUE
 
-            if not killers or not morto:
-                continue
-
-            killers_lista = killers.split(" & ")
-
-            killers_norm = [
-                limpar_nome(k)
-                for k in killers_lista
-            ]
-
-            morto_norm = limpar_nome(morto)
-
-            ts_int = 0
-
-            try:
-                ts_int = int(ts.timestamp())
-            except:
-                pass
-
-            # =====================================
-            # FEED RANDOM
-            # =====================================
-
-            existe_feed = any(
-                len(e) >= 2
-                and e[0] == base
-                and e[1] == tempo
-                for e in FEED
-            )
-
-            if not existe_feed:
-
-                FEED.append((
-                    base,
-                    tempo,
-                    ts_int,
-                    i
-                ))
-
-            # Mantém somente cache recente para não mostrar PvP velho
-            FEED = [
-                e for e in FEED
-                if len(e) >= 3 and e[2] >= int(limite.timestamp())
-            ][-500:]
-
-            # =====================================
-            # FILTRO WAR
-            # =====================================
-
-            killer_virtue = any(
-                k in MEMBROS_VIRTUE
-                for k in killers_norm
-            )
-
-            killer_peace = any(
-                k in MEMBROS_PEACE
-                for k in killers_norm
-            )
-
-            morto_virtue = morto_norm in MEMBROS_VIRTUE
-            morto_peace = morto_norm in MEMBROS_PEACE
-
-            is_war = (
-                (killer_virtue and morto_peace)
-                or
-                (killer_peace and morto_virtue)
-            )
-
-            if not is_war:
-                continue
-
-            # Não remove kills iguais pelo mesmo killer/vítima/tempo,
-            # porque o site pode listar 2 ou 3 kills iguais no mesmo horário textual
-            # Exemplo: "Virtuelessz killed Peace Aquillees - about 12 hours ago" repetido 3x.
-            # A chave inclui o perfil lido e a ordem da linha para manter essas repetições.
-            chave = (
-                limpar_nome(nome),
-                limpar_nome(base),
-                tempo,
-                i
-            )
-
-            if chave in vistos_war:
-                continue
-
-            vistos_war.add(chave)
-
-            icon = "🟦" if killer_virtue else "🟥"
-
-            kills_war.append({
-                "icon": icon,
-                "killers": killers_lista,
-                "victim": morto,
+            evento = {
+                "killers": killers,
+                "victim": vitima,
                 "tempo": tempo,
-                "timestamp": ts_int,
-                "ordem": i
-            })
+                "idade": idade_segundos,
+                "ordem_perfil": ordem_perfil,
+                "ordem_linha": ordem_linha,
+                "icon": "🔵" if killer_virtue else "🔴",
+            }
 
-    # =====================================
-    # ORDENAR MAIS RECENTES
-    # =====================================
+            # Chave inclui a posição da linha para manter repetições legítimas.
+            chave_random = (
+                limpar_nome(base),
+                tempo.lower(),
+                ordem_linha,
+            )
 
-    kills_war.sort(
-        key=lambda x: (
-            -x["timestamp"],
-            x["ordem"]
-        )
+            if chave_random not in vistos_random:
+                vistos_random.add(chave_random)
+                eventos_random.append(evento.copy())
+
+            killer_peace = any(k in MEMBROS_PEACE for k in killers_norm)
+            vitima_peace = vitima_norm in MEMBROS_PEACE
+            guerra_peace = (
+                (killer_virtue and vitima_peace)
+                or (killer_peace and vitima_virtue)
+            )
+
+            if guerra_peace:
+                chave = (limpar_nome(base), tempo.lower(), ordem_linha)
+                if chave not in vistos_peace:
+                    vistos_peace.add(chave)
+                    evento_peace = evento.copy()
+                    evento_peace["icon"] = "🔵" if killer_virtue else "🔴"
+                    eventos_peace.append(evento_peace)
+
+            killer_infernal = any(k in MEMBROS_INFERNAL for k in killers_norm)
+            vitima_infernal = vitima_norm in MEMBROS_INFERNAL
+            guerra_infernal = (
+                (killer_virtue and vitima_infernal)
+                or (killer_infernal and vitima_virtue)
+            )
+
+            if guerra_infernal:
+                chave = (limpar_nome(base), tempo.lower(), ordem_linha)
+                if chave not in vistos_infernal:
+                    vistos_infernal.add(chave)
+                    evento_infernal = evento.copy()
+                    evento_infernal["icon"] = "🔵" if killer_virtue else "🔴"
+                    eventos_infernal.append(evento_infernal)
+
+    # Mais recente em cima. Para tempos iguais, mantém a ordem mostrada pelo site.
+    chave_ordenacao = lambda e: (
+        e["idade"],
+        e["ordem_perfil"],
+        e["ordem_linha"],
     )
 
-    print(f"\n🧠 PvPs WAR encontrados nas últimas {LIMITE_PVP_HORAS}h: {len(kills_war)}")
+    eventos_random.sort(key=chave_ordenacao)
+    eventos_peace.sort(key=chave_ordenacao)
+    eventos_infernal.sort(key=chave_ordenacao)
 
-    return kills_war
+    print(
+        f"🧠 Encontrados: Random={len(eventos_random)} | "
+        f"Peace={len(eventos_peace)} | Infernal={len(eventos_infernal)}"
+    )
+
+    return eventos_peace, eventos_infernal, eventos_random
 
 # =========================
-# MONTAR MSG
+# PAINÉIS
 # =========================
 
-def gerar_msg_pvp_tracker(kills_filtradas):
 
-    msg = ""
+def adicionar_eventos(msg, eventos):
+    if not eventos:
+        return msg + "_Nenhum PvP encontrado._\n"
 
-    msg += "⛓️━━━━━━━━ **WAR STATUS** ━━━━━━━━⛓️\n\n"
-    msg += "🛡️ **Virtue**  ⚔️  **Peace** 👹\n"
+    for evento in eventos[:MAX_EVENTOS_PAINEL]:
+        killers = evento["killers"]
+        killers_txt = formatar_killers(killers)
+        verbo = verbo_matar(len(killers))
+
+        msg += (
+            f'{evento["icon"]} {killers_txt} {verbo} **{evento["victim"]}**\n'
+            f'└─ ⏱️ {traduzir_tempo(evento["tempo"])}\n\n'
+        )
+
+    return msg
+
+
+def gerar_painel_guerra(nome_inimigo, emoji, eventos):
+    agora = datetime.now(BRASIL).strftime("%H:%M")
+
+    msg = "⛓️━━━━━━━━ **WAR STATUS** ━━━━━━━━⛓️\n\n"
+    msg += f"🛡️ **Virtue**  ⚔️  **{nome_inimigo}** {emoji}\n"
     msg += f"📌 PvPs registrados nas últimas **{LIMITE_PVP_HORAS} horas**\n\n"
+    msg = adicionar_eventos(msg, eventos)
+    msg += f"\n🕒 **Última atualização:** {agora}"
 
-    # =====================================
-    # PEGAR 10 MAIS RECENTES
-    # =====================================
+    return msg[:2000]
 
-    kills_exibir = kills_filtradas[:10]
 
-    if not kills_exibir:
-
-        msg += "_Nenhum PvP encontrado._\n"
-
-    else:
-
-        for kill in kills_exibir:
-
-            killers = kill["killers"]
-            victim = kill["victim"]
-            tempo = traduzir_tempo(kill["tempo"])
-            icon = icon_para_cor(kill["icon"])
-
-            killers_txt = formatar_killers(killers)
-            verbo = verbo_matar(len(killers))
-
-            msg += (
-                f"{icon} {killers_txt} {verbo} **{victim}**\n"
-                f"└─ ⏱️ {tempo}\n\n"
-            )
-
-    return msg.rstrip()
-
-def montar_msg_virtue():
-
+def gerar_painel_random(eventos):
     agora = datetime.now(BRASIL).strftime("%H:%M")
 
     msg = "☠️━━━━━━ **RANDOM KILLS** ━━━━━━☠️\n\n"
-    msg += "📡 Últimos PvPs encontrados\n\n"
+    msg += "📡 Últimos PvPs encontrados nos membros da Virtue\n\n"
+    msg = adicionar_eventos(msg, eventos)
+    msg += f"\n🕒 **Última atualização:** {agora}"
 
-    filtrados = FEED.copy()
-
-    # 🔥 SORT IGUAL AO SITE
-    filtrados.sort(
-        key=lambda x: (
-            -x[2],  # timestamp
-            x[3]    # ordem no site
-        )
-    )
-
-    if not filtrados:
-
-        msg += "_Nenhum PvP encontrado._\n"
-
-    else:
-
-        for base, tempo, ts, ordem in filtrados[:10]:
-
-            killers, morto = normalizar_kill(base)
-
-            killers_lista = killers.split(" & ")
-
-            killers_fmt = formatar_killers(killers_lista)
-            morto_fmt = f"**{morto.strip()}**"
-            tempo_fmt = traduzir_tempo(tempo)
-            verbo = verbo_matar(len(killers_lista))
-
-            # 🔥 ICON RANDOM
-            killers_norm = [
-                limpar_nome(k)
-                for k in killers_lista
-            ]
-
-            killer_virtue = any(
-                k in MEMBROS_VIRTUE
-                for k in killers_norm
-            )
-
-            icon = "🔵" if killer_virtue else "🔴"
-
-            msg += (
-                f"{icon} {killers_fmt} {verbo} {morto_fmt}\n"
-                f"└─ ⏱️ {tempo_fmt}\n\n"
-            )
-
-    msg += f"🕒 **Última atualização:** {agora}"
-
-    return msg[:1900]
+    return msg[:2000]
 
 # =========================
 # LOOP
 # =========================
 
-print("🔥 Bot PvP iniciado")
 
-msg_id = None
+def main():
+    print("🔥 Bot PvP com 3 painéis iniciado")
 
-atualizar_membros()
+    ids = carregar_ids()
+    atualizar_membros()
+    ultimo_update_membros = time.time()
 
-ultimo_update_membros = time.time()
+    while True:
+        try:
+            # Atualiza as três listas a cada 10 minutos.
+            if time.time() - ultimo_update_membros >= 600:
+                atualizar_membros()
+                ultimo_update_membros = time.time()
 
-while True:
+            peace, infernal, random = analisar_pvps()
 
-    try:
+            painel_peace = gerar_painel_guerra("Peace Killers", "🟥", peace)
+            painel_infernal = gerar_painel_guerra("Infernal Cruelty", "👹", infernal)
+            painel_random = gerar_painel_random(random)
 
-        # 🔄 atualiza membros a cada 10min
-        if time.time() - ultimo_update_membros > 600:
+            # Cada painel possui sua própria mensagem e é editado separadamente.
+            atualizar_painel(ids, "peace", painel_peace)
+            atualizar_painel(ids, "infernal", painel_infernal)
+            atualizar_painel(ids, "random", painel_random)
 
-            atualizar_membros()
+            time.sleep(INTERVALO)
 
-            ultimo_update_membros = time.time()
+        except Exception as erro:
+            print("❌ Erro no loop principal:", erro)
+            time.sleep(60)
 
-        # =====================================
-        # ANALISA PvPs
-        # =====================================
 
-        kills_site = analisar_pvp()
-
-        # =====================================
-        # GERAR MSG
-        # =====================================
-
-        msg = (
-            gerar_msg_pvp_tracker(kills_site)
-            + "\n\n"
-            + montar_msg_virtue()
-        )
-
-        # =====================================
-        # EDITAR MSG
-        # =====================================
-
-        if msg_id:
-
-            editar(msg_id, msg)
-
-        else:
-
-            msg_id = enviar_e_pegar_id(msg)
-
-        print(f"\n🧠 Cache PvP: {len(FEED)} eventos\n")
-
-        time.sleep(INTERVALO)
-
-    except Exception as e:
-
-        print("Erro:", e)
-
-        time.sleep(60)
+if __name__ == "__main__":
+    main()
