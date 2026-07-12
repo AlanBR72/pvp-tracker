@@ -22,12 +22,12 @@ URL_PEACE = "https://www.rucoyonline.com/guild/Peace%20Killers"
 URL_INFERNAL = "https://www.rucoyonline.com/guild/Infernal%20Cruelty"
 
 BRASIL = pytz.timezone("America/Sao_Paulo")
-INTERVALO = 300  # 5 minutos
+INTERVALO = 600  # 5 minutos
 LIMITE_PVP_HORAS = 23
 MAX_EVENTOS_PAINEL = 10
 
 # Proteção contra bloqueio 429 do site.
-ATRASO_ENTRE_PERFIS = 1.5  # segundos entre páginas de personagens
+ATRASO_ENTRE_PERFIS = 2  # segundos entre páginas de personagens
 MAX_TENTATIVAS_429 = 3
 ESPERA_PADRAO_429 = 60
 
